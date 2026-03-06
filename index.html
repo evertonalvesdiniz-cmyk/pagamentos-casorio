@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Casamento - Controle</title>
+
+<link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+<!-- LOGIN -->
+
+<div id="loginBox">
+
+<h2>🔒 Acesso</h2>
+
+<input type="password" id="senha" placeholder="Senha">
+
+<button onclick="login()">Entrar</button>
+
+<p id="erro"></p>
+
+</div>
+
+<!-- SISTEMA -->
+
+<div id="sistema" style="display:none">
+
+<header>
+
+<h1>💍 Controle do Casamento</h1>
+
+<button class="logout" onclick="logout()">Sair</button>
+
+</header>
+
+<!-- DASHBOARD -->
+
+<div class="dashboard">
+
+<div class="card">
+<span>Total Planejado</span>
+<h3 id="totalPlanejado">R$0</h3>
+</div>
+
+<div class="card">
+<span>Total Pago</span>
+<h3 id="totalPago">R$0</h3>
+</div>
+
+<div class="card">
+<span>Falta Pagar</span>
+<h3 id="faltaPagar">R$0</h3>
+</div>
+
+</div>
+
+<!-- FORM -->
+
+<div class="form">
+
+<input id="item" placeholder="Item (ex: Buffet)">
+
+<select id="categoria">
+
+<option>Buffet</option>
+<option>Decoração</option>
+<option>Vestido</option>
+<option>Lua de Mel</option>
+<option>Fotografia</option>
+<option>Outros</option>
+
+</select>
+
+<input id="valorTotal" placeholder="Valor Total">
+
+<input id="valorPago" placeholder="Valor Pago">
+
+<button onclick="salvar()">Salvar</button>
+
+</div>
+
+<!-- TABELA -->
+
+<div class="lista">
+
+<table>
+
+<thead>
+
+<tr>
+<th>Item</th>
+<th>Categoria</th>
+<th>Total</th>
+<th>Pago</th>
+<th>Falta</th>
+<th></th>
+</tr>
+
+</thead>
+
+<tbody id="tabela"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
