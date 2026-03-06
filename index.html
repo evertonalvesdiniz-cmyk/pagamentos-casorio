@@ -159,24 +159,14 @@ color:#721c24;
 border-left:4px solid #dc3545;
 }
 
-.loading{
-display:inline-block;
-width:16px;
-height:16px;
-border:3px solid rgba(255,255,255,0.3);
-border-radius:50%;
-border-top-color:white;
-animation:spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-to { transform:rotate(360deg); }
-}
-
 .empty-state{
 text-align:center;
 color:#999;
 padding:40px 20px;
+}
+
+#uploadFrame{
+display:none;
 }
 
 </style>
@@ -244,13 +234,15 @@ Total pago: R$ <span id="totalPago">0</span>
 
 </div>
 
+<iframe name="uploadFrame" id="uploadFrame"></iframe>
+
 <script>
 
 // ============================================
 // CONFIGURAÇÃO
 // ============================================
 
-const API_URL = "https://script.google.com/macros/s/AKfycbwW5ICJh4go5aJi_1TOSts7gN3MyZv3EXgbQYvxXjPttEKdCUo7cr1PNCoApqjpKJX05w/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwW5ICJh4go5aJi_1TOSts7gN3MyZv3EXgbQYvxXjPttEKdCUo7cr1PNCoApqjpKJX05w/exec";
 
 let itens = [];
 let itemSelecionado = null;
@@ -264,31 +256,62 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================
-// CARREGAR ITENS DO GOOGLE SHEETS
+// CARREGAR ITENS
 // ============================================
 
-async function carregarItens() {
-  try {
-    const response = await fetch(`${API_URL}?action=getItems`);
-    const data = await response.json();
-    
-    if (data.success) {
-      itens = data.items || [];
-      render();
-    } else {
-      mostrarAlerta('Erro ao carregar itens', 'erro');
-    }
-  } catch (error) {
-    console.error('Erro ao carregar:', error);
-    mostrarAlerta('Erro ao conectar com servidor', 'erro');
+function carregarItens() {
+  // Recuperar do localStorage
+  const itensArmazenados = localStorage.getItem("casamento_itens");
+  if (itensArmazenados) {
+    itens = JSON.parse(itensArmazenados);
+    render();
   }
+}
+
+// ============================================
+// SALVAR ITENS
+// ============================================
+
+function salvarItens() {
+  localStorage.setItem("casamento_itens", JSON.stringify(itens));
+}
+
+// ============================================
+// ENVIAR PARA GOOGLE SHEETS (via formulário)
+// ============================================
+
+function enviarParaSheets(item, tipo = "item") {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = SCRIPT_URL;
+  form.target = "uploadFrame";
+
+  const dados = {
+    tipo: tipo,
+    descricao: item.descricao,
+    valor: item.valor || item.valorPago,
+    itemId: item.id || "",
+    data: new Date().toLocaleDateString('pt-BR')
+  };
+
+  for(let key in dados){
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = dados[key];
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
 }
 
 // ============================================
 // ADICIONAR ITEM
 // ============================================
 
-async function addItem() {
+function addItem() {
   const descricao = document.getElementById("descricao").value.trim();
   const valor = parseFloat(document.getElementById("valorTotal").value);
 
@@ -299,40 +322,30 @@ async function addItem() {
 
   const btnAdicionar = document.getElementById("btnAdicionar");
   btnAdicionar.disabled = true;
-  const textoOriginal = btnAdicionar.innerText;
-  btnAdicionar.innerHTML = '<span class="loading"></span>';
 
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        action: 'addItem',
-        descricao: descricao,
-        valor: valor
-      })
-    });
+  const novoItem = {
+    id: Date.now().toString(),
+    descricao: descricao,
+    valor: valor,
+    valorTotal: valor,
+    valorPago: 0,
+    pagamentos: []
+  };
 
-    const data = await response.json();
+  itens.push(novoItem);
+  salvarItens();
 
-    if (data.success) {
-      mostrarAlerta('✅ Compromisso adicionado!', 'sucesso');
-      document.getElementById("descricao").value = "";
-      document.getElementById("valorTotal").value = "";
-      await carregarItens();
-    } else {
-      mostrarAlerta('❌ Erro: ' + data.error, 'erro');
-    }
+  // Enviar para Google Sheets
+  enviarParaSheets(novoItem, "item");
 
-  } catch (error) {
-    console.error('Erro:', error);
-    mostrarAlerta('❌ Erro ao salvar', 'erro');
-  } finally {
+  mostrarAlerta('✅ Compromisso adicionado!', 'sucesso');
+  document.getElementById("descricao").value = "";
+  document.getElementById("valorTotal").value = "";
+
+  setTimeout(() => {
     btnAdicionar.disabled = false;
-    btnAdicionar.innerText = textoOriginal;
-  }
+    render();
+  }, 1500);
 }
 
 // ============================================
@@ -340,44 +353,33 @@ async function addItem() {
 // ============================================
 
 function totalPagoItem(item) {
-  return item.valorPago || 0;
+  return item.pagamentos ? item.pagamentos.reduce((s, p) => s + p.valor, 0) : item.valorPago || 0;
 }
 
 // ============================================
-// ABRIR MODAL DE DETALHES
+// ABRIR MODAL
 // ============================================
 
-async function abrirDetalhes(i) {
+function abrirDetalhes(i) {
   itemSelecionado = i;
   let item = itens[i];
 
   document.getElementById("modal").style.display = "flex";
   document.getElementById("tituloItem").innerText = item.descricao;
 
-  // Carregar histórico de pagamentos
-  try {
-    const response = await fetch(`${API_URL}?action=getItem&id=${item.id}`);
-    const data = await response.json();
+  let historico = document.getElementById("historico");
+  historico.innerHTML = "";
 
-    if (data.success) {
-      let historico = document.getElementById("historico");
-      historico.innerHTML = "";
-
-      if (data.pagamentos && data.pagamentos.length > 0) {
-        data.pagamentos.forEach(p => {
-          const data_formatada = new Date(p.data).toLocaleDateString('pt-BR');
-          historico.innerHTML += `
-            <div class="pagoItem">
-              R$ ${parseFloat(p.valor).toFixed(2).replace('.', ',')} — ${data_formatada}
-            </div>
-          `;
-        });
-      } else {
-        historico.innerHTML = '<p style="color:#999;">Nenhum pagamento registrado</p>';
-      }
-    }
-  } catch (error) {
-    console.error('Erro ao carregar histórico:', error);
+  if (item.pagamentos && item.pagamentos.length > 0) {
+    item.pagamentos.forEach(p => {
+      historico.innerHTML += `
+        <div class="pagoItem">
+          R$ ${p.valor.toFixed(2).replace('.', ',')} — ${p.data}
+        </div>
+      `;
+    });
+  } else {
+    historico.innerHTML = '<p style="color:#999;">Nenhum pagamento registrado</p>';
   }
 }
 
@@ -394,7 +396,7 @@ function fecharModal() {
 // REGISTRAR PAGAMENTO
 // ============================================
 
-async function registrarPagamento() {
+function registrarPagamento() {
   const valor = parseFloat(document.getElementById("valorPagamento").value);
 
   if (!valor || valor <= 0) {
@@ -405,61 +407,53 @@ async function registrarPagamento() {
   const item = itens[itemSelecionado];
   const btnRegistrar = document.getElementById("btnRegistrar");
   btnRegistrar.disabled = true;
-  const textoOriginal = btnRegistrar.innerText;
-  btnRegistrar.innerHTML = '<span class="loading"></span>';
 
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        action: 'addPayment',
-        itemId: item.id,
-        valor: valor,
-        descricao: ''
-      })
-    });
+  const hoje = new Date().toLocaleDateString('pt-BR');
 
-    const data = await response.json();
-
-    if (data.success) {
-      mostrarAlerta('✅ Pagamento registrado!', 'sucesso');
-      document.getElementById("valorPagamento").value = "";
-      fecharModal();
-      await carregarItens();
-    } else {
-      mostrarAlerta('❌ Erro: ' + data.error, 'erro');
-    }
-
-  } catch (error) {
-    console.error('Erro:', error);
-    mostrarAlerta('❌ Erro ao registrar', 'erro');
-  } finally {
-    btnRegistrar.disabled = false;
-    btnRegistrar.innerText = textoOriginal;
+  if (!item.pagamentos) {
+    item.pagamentos = [];
   }
+
+  item.pagamentos.push({
+    valor: valor,
+    data: hoje
+  });
+
+  item.valorPago = totalPagoItem(item);
+
+  salvarItens();
+
+  // Enviar para Google Sheets
+  const pagamento = {
+    id: Date.now().toString(),
+    descricao: item.descricao,
+    valor: valor,
+    valorPago: valor,
+    itemId: item.id,
+    data: hoje
+  };
+  enviarParaSheets(pagamento, "pagamento");
+
+  mostrarAlerta('✅ Pagamento registrado!', 'sucesso');
+  document.getElementById("valorPagamento").value = "";
+  fecharModal();
+
+  setTimeout(() => {
+    btnRegistrar.disabled = false;
+    render();
+    abrirDetalhes(itemSelecionado);
+  }, 1500);
 }
 
 // ============================================
 // REMOVER ITEM
 // ============================================
 
-async function remover(i) {
+function remover(i) {
   if (!confirm('Tem certeza que deseja remover?')) return;
-
-  const item = itens[i];
-
-  try {
-    // Nota: implementar delete no Apps Script se necessário
-    // Por enquanto, apenas remove localmente
-    itens.splice(i, 1);
-    render();
-    mostrarAlerta('Item removido', 'sucesso');
-  } catch (error) {
-    console.error('Erro:', error);
-  }
+  itens.splice(i, 1);
+  salvarItens();
+  render();
 }
 
 // ============================================
@@ -477,7 +471,7 @@ function mostrarAlerta(msg, tipo) {
 }
 
 // ============================================
-// RENDERIZAR INTERFACE
+// RENDERIZAR
 // ============================================
 
 function render() {
@@ -503,9 +497,9 @@ function render() {
 
   itens.forEach((item, i) => {
     let pago = totalPagoItem(item);
-    let progresso = (pago / item.valorTotal) * 100;
+    let progresso = (pago / item.valor) * 100;
 
-    totalPlanejado += item.valorTotal;
+    totalPlanejado += item.valor;
     totalPago += pago;
 
     lista.innerHTML += `
@@ -513,7 +507,7 @@ function render() {
         <div class="topItem">
           <div>
             <strong>${item.descricao}</strong><br>
-            R$ ${pago.toFixed(2).replace('.', ',')} / R$ ${item.valorTotal.toFixed(2).replace('.', ',')}
+            R$ ${pago.toFixed(2).replace('.', ',')} / R$ ${item.valor.toFixed(2).replace('.', ',')}
           </div>
         </div>
 
@@ -548,5 +542,3 @@ document.addEventListener('click', function(event) {
 
 </body>
 </html>
-
-
