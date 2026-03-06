@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
@@ -9,41 +10,38 @@
 <style>
 
 body{
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
-background:#f6f6f6;
+font-family:-apple-system,BlinkMacSystemFont,"Segoe UI";
+background:#f5f5f5;
 margin:0;
-padding:0;
 }
 
 .container{
-max-width:500px;
+max-width:520px;
 margin:auto;
 padding:20px;
 }
 
 h1{
 text-align:center;
-font-size:28px;
 }
 
 .frase{
 text-align:center;
 color:#666;
 margin-bottom:20px;
-font-style:italic;
 }
 
 .card{
 background:white;
-border-radius:14px;
 padding:20px;
+border-radius:12px;
 box-shadow:0 4px 10px rgba(0,0,0,0.05);
 margin-bottom:20px;
 }
 
 input{
 width:100%;
-padding:14px;
+padding:12px;
 margin-bottom:10px;
 border-radius:8px;
 border:1px solid #ddd;
@@ -51,63 +49,84 @@ font-size:16px;
 }
 
 button{
-width:100%;
-padding:14px;
+padding:12px;
 border:none;
-border-radius:10px;
+border-radius:8px;
 background:#ff4d6d;
 color:white;
-font-size:16px;
 font-weight:bold;
-}
-
-.lista{
-margin-top:20px;
+width:100%;
 }
 
 .item{
 background:white;
-padding:14px;
+padding:15px;
 border-radius:10px;
-margin-bottom:10px;
+margin-bottom:12px;
+}
+
+.topItem{
 display:flex;
 justify-content:space-between;
-align-items:center;
 }
 
-.pago{
-background:#e8f7ee;
+.progresso{
+height:8px;
+background:#ddd;
+border-radius:5px;
+margin-top:8px;
+overflow:hidden;
 }
 
-.valor{
-font-weight:bold;
+.progressoBar{
+height:8px;
+background:#4CAF50;
 }
 
-.acoes{
+.botoes{
 display:flex;
 gap:10px;
+margin-top:10px;
 }
 
-.btnPagar{
-background:#4CAF50;
-padding:6px 10px;
-border-radius:6px;
-color:white;
+.botoes button{
+flex:1;
 font-size:14px;
-}
-
-.btnDelete{
-background:none;
-border:none;
-color:red;
-font-size:18px;
+padding:8px;
 }
 
 .total{
 text-align:center;
-font-size:22px;
+font-size:20px;
 font-weight:bold;
-margin-top:20px;
+}
+
+.modal{
+position:fixed;
+top:0;
+left:0;
+right:0;
+bottom:0;
+background:rgba(0,0,0,0.6);
+display:none;
+align-items:center;
+justify-content:center;
+}
+
+.modalContent{
+background:white;
+padding:20px;
+border-radius:12px;
+width:90%;
+max-width:420px;
+}
+
+.pagoItem{
+background:#e8f7ee;
+padding:8px;
+border-radius:6px;
+margin-top:6px;
+font-size:14px;
 }
 
 </style>
@@ -117,97 +136,202 @@ margin-top:20px;
 
 <div class="container">
 
-<h1>💍 Pagamentos do Casamento</h1>
+<h1>💍 Nosso Casamento</h1>
 
 <div class="frase">
-"Cada pagamento é um passo mais perto do grande dia ❤️"
+"Cada pagamento é um passo para o grande dia ❤️"
 </div>
 
 <div class="card">
 
-<input id="descricao" placeholder="Ex: Fotógrafo incrível">
+<input id="descricao" placeholder="Ex: Fotógrafo">
 
-<input id="valor" type="number" placeholder="Valor (R$)">
+<input id="valorTotal" type="number" placeholder="Valor total (R$)">
 
 <button onclick="addItem()">Adicionar compromisso ✨</button>
 
 </div>
 
-<div class="lista" id="lista"></div>
+<div class="card">
 
 <div class="total">
-Total de compromissos: R$ <span id="total">0</span>
+Total planejado: R$ <span id="totalPlanejado">0</span>
+</div>
+
+<div class="total">
+Total pago: R$ <span id="totalPago">0</span>
+</div>
+
+<div class="progresso">
+<div id="barraGeral" class="progressoBar"></div>
+</div>
+
+</div>
+
+<div id="lista"></div>
+
+</div>
+
+<div id="modal" class="modal">
+
+<div class="modalContent">
+
+<h3 id="tituloItem"></h3>
+
+<input id="valorPagamento" type="number" placeholder="Valor pago">
+
+<button onclick="registrarPagamento()">Registrar pagamento 🎉</button>
+
+<h4>Histórico</h4>
+
+<div id="historico"></div>
+
+<button onclick="fecharModal()">Fechar</button>
+
 </div>
 
 </div>
 
 <script>
 
-let itens=[]
+let itens = JSON.parse(localStorage.getItem("casamento")) || []
+
+let itemSelecionado = null
+
+function salvar(){
+
+localStorage.setItem("casamento",JSON.stringify(itens))
+
+}
 
 function addItem(){
 
-let descricao=document.getElementById("descricao").value
-let valor=parseFloat(document.getElementById("valor").value)
+let descricao = document.getElementById("descricao").value
+let valor = parseFloat(document.getElementById("valorTotal").value)
 
 if(!descricao || !valor){
-alert("Preencha os campos 😊")
+alert("Preencha os campos")
 return
 }
 
-itens.push({descricao,valor,pago:false})
+itens.push({
+descricao,
+valorTotal:valor,
+pagamentos:[]
+})
 
 document.getElementById("descricao").value=""
-document.getElementById("valor").value=""
+document.getElementById("valorTotal").value=""
 
+salvar()
 render()
 
 }
 
-function pagar(i){
+function totalPagoItem(item){
 
-itens[i].pago=true
-
-render()
+return item.pagamentos.reduce((s,p)=>s+p.valor,0)
 
 }
 
-function remover(i){
+function abrirDetalhes(i){
 
-itens.splice(i,1)
+itemSelecionado=i
 
+let item=itens[i]
+
+document.getElementById("modal").style.display="flex"
+
+document.getElementById("tituloItem").innerText=item.descricao
+
+let historico=document.getElementById("historico")
+
+historico.innerHTML=""
+
+item.pagamentos.forEach(p=>{
+
+historico.innerHTML+=`
+<div class="pagoItem">
+R$ ${p.valor} — ${p.data}
+</div>
+`
+
+})
+
+}
+
+function fecharModal(){
+
+document.getElementById("modal").style.display="none"
+
+}
+
+function registrarPagamento(){
+
+let valor=parseFloat(document.getElementById("valorPagamento").value)
+
+if(!valor) return
+
+let hoje=new Date().toLocaleDateString()
+
+itens[itemSelecionado].pagamentos.push({
+valor:valor,
+data:hoje
+})
+
+document.getElementById("valorPagamento").value=""
+
+salvar()
 render()
+
+abrirDetalhes(itemSelecionado)
 
 }
 
 function render(){
 
 let lista=document.getElementById("lista")
+
 lista.innerHTML=""
 
-let total=0
+let totalPlanejado=0
+let totalPago=0
 
 itens.forEach((item,i)=>{
 
-total+=item.valor
+let pago=totalPagoItem(item)
+
+let progresso=(pago/item.valorTotal)*100
+
+totalPlanejado+=item.valorTotal
+totalPago+=pago
 
 lista.innerHTML+=`
 
-<div class="item ${item.pago ? 'pago' : ''}">
+<div class="item">
+
+<div class="topItem">
 
 <div>
-
-<div>${item.descricao}</div>
-<div class="valor">R$ ${item.valor}</div>
-${item.pago ? "<div>✔ Pago 🎉</div>" : ""}
+<strong>${item.descricao}</strong><br>
+R$ ${pago} / R$ ${item.valorTotal}
+</div>
 
 </div>
 
-<div class="acoes">
+<div class="progresso">
+<div class="progressoBar" style="width:${progresso}%"></div>
+</div>
 
-${!item.pago ? `<button class="btnPagar" onclick="pagar(${i})">Pagar 🎉</button>` : ""}
+<div class="botoes">
 
-<button class="btnDelete" onclick="remover(${i})">❌</button>
+<button onclick="abrirDetalhes(${i})">
+Ver mais
+</button>
+
+<button onclick="remover(${i})">
+Excluir
+</button>
 
 </div>
 
@@ -217,9 +341,26 @@ ${!item.pago ? `<button class="btnPagar" onclick="pagar(${i})">Pagar 🎉</butto
 
 })
 
-document.getElementById("total").innerText=total
+document.getElementById("totalPlanejado").innerText=totalPlanejado
+document.getElementById("totalPago").innerText=totalPago
+
+let progressoTotal=(totalPago/totalPlanejado)*100
+
+document.getElementById("barraGeral").style.width=progressoTotal+"%"
 
 }
+
+function remover(i){
+
+itens.splice(i,1)
+
+salvar()
+
+render()
+
+}
+
+render()
 
 </script>
 
