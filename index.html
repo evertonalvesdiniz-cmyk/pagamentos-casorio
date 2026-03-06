@@ -1,242 +1,203 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>💍 Pagamentos do Casamento</title>
-
 <style>
-
 body{
-font-family:-apple-system,BlinkMacSystemFont,"Segoe UI";
-background:#f5f5f5;
-margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI";
+  background:#f5f5f5;
+  margin:0;
 }
-
 .container{
-max-width:520px;
-margin:auto;
-padding:20px;
+  max-width:520px;
+  margin:auto;
+  padding:20px;
 }
-
 h1{
-text-align:center;
+  text-align:center;
 }
-
 .frase{
-text-align:center;
-color:#666;
-margin-bottom:20px;
+  text-align:center;
+  color:#666;
+  margin-bottom:20px;
 }
-
 .card{
-background:white;
-padding:20px;
-border-radius:12px;
-box-shadow:0 4px 10px rgba(0,0,0,0.05);
-margin-bottom:20px;
+  background:white;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.05);
+  margin-bottom:20px;
 }
-
 input{
-width:100%;
-padding:12px;
-margin-bottom:10px;
-border-radius:8px;
-border:1px solid #ddd;
-font-size:16px;
-box-sizing:border-box;
+  width:100%;
+  padding:12px;
+  margin-bottom:10px;
+  border-radius:8px;
+  border:1px solid #ddd;
+  font-size:16px;
+  box-sizing:border-box;
 }
-
 button{
-padding:12px;
-border:none;
-border-radius:8px;
-background:#ff4d6d;
-color:white;
-font-weight:bold;
-width:100%;
-cursor:pointer;
+  padding:12px;
+  border:none;
+  border-radius:8px;
+  background:#ff4d6d;
+  color:white;
+  font-weight:bold;
+  width:100%;
+  cursor:pointer;
 }
-
 button:hover{
-background:#e63d63;
+  background:#e63d63;
 }
-
 button:disabled{
-background:#ccc;
-cursor:not-allowed;
+  background:#ccc;
+  cursor:not-allowed;
 }
-
 .item{
-background:white;
-padding:15px;
-border-radius:10px;
-margin-bottom:12px;
+  background:white;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:12px;
 }
-
 .topItem{
-display:flex;
-justify-content:space-between;
+  display:flex;
+  justify-content:space-between;
 }
-
 .progresso{
-height:8px;
-background:#ddd;
-border-radius:5px;
-margin-top:8px;
-overflow:hidden;
+  height:8px;
+  background:#ddd;
+  border-radius:5px;
+  margin-top:8px;
+  overflow:hidden;
 }
-
 .progressoBar{
-height:8px;
-background:#4CAF50;
+  height:8px;
+  background:#4CAF50;
 }
-
 .botoes{
-display:flex;
-gap:10px;
-margin-top:10px;
+  display:flex;
+  gap:10px;
+  margin-top:10px;
 }
-
 .botoes button{
-flex:1;
-font-size:14px;
-padding:8px;
+  flex:1;
+  font-size:14px;
+  padding:8px;
 }
-
 .total{
-text-align:center;
-font-size:20px;
-font-weight:bold;
+  text-align:center;
+  font-size:20px;
+  font-weight:bold;
 }
-
 .modal{
-position:fixed;
-top:0;
-left:0;
-right:0;
-bottom:0;
-background:rgba(0,0,0,0.6);
-display:none;
-align-items:center;
-justify-content:center;
-z-index:1000;
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;
+  background:rgba(0,0,0,0.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
 }
-
 .modalContent{
-background:white;
-padding:20px;
-border-radius:12px;
-width:90%;
-max-width:420px;
+  background:white;
+  padding:20px;
+  border-radius:12px;
+  width:90%;
+  max-width:420px;
 }
-
 .pagoItem{
-background:#e8f7ee;
-padding:8px;
-border-radius:6px;
-margin-top:6px;
-font-size:14px;
+  background:#e8f7ee;
+  padding:8px;
+  border-radius:6px;
+  margin-top:6px;
+  font-size:14px;
 }
-
 .alerta{
-padding:12px;
-border-radius:8px;
-margin-bottom:15px;
+  padding:12px;
+  border-radius:8px;
+  margin-bottom:15px;
 }
-
 .alerta.sucesso{
-background:#d4edda;
-color:#155724;
-border-left:4px solid #28a745;
+  background:#d4edda;
+  color:#155724;
+  border-left:4px solid #28a745;
 }
-
 .alerta.erro{
-background:#f8d7da;
-color:#721c24;
-border-left:4px solid #dc3545;
+  background:#f8d7da;
+  color:#721c24;
+  border-left:4px solid #dc3545;
 }
-
 .empty-state{
-text-align:center;
-color:#999;
-padding:40px 20px;
+  text-align:center;
+  color:#999;
+  padding:40px 20px;
 }
-
 #uploadFrame{
-display:none;
+  display:none;
 }
-
 .confirmModal{
-position:fixed;
-top:0;
-left:0;
-right:0;
-bottom:0;
-background:rgba(0,0,0,0.6);
-display:none;
-align-items:center;
-justify-content:center;
-z-index:2000;
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;
+  background:rgba(0,0,0,0.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:2000;
 }
-
 .confirmContent{
-background:white;
-padding:30px;
-border-radius:12px;
-width:90%;
-max-width:400px;
-text-align:center;
+  background:white;
+  padding:30px;
+  border-radius:12px;
+  width:90%;
+  max-width:400px;
+  text-align:center;
 }
-
 .confirmContent h3{
-margin-top:0;
-color:#333;
+  margin-top:0;
+  color:#333;
 }
-
 .confirmContent p{
-color:#666;
-margin-bottom:20px;
+  color:#666;
+  margin-bottom:20px;
 }
-
 .confirmBotoes{
-display:flex;
-gap:12px;
-justify-content:center;
+  display:flex;
+  gap:12px;
+  justify-content:center;
 }
-
 .confirmBotoes button{
-flex:1;
-padding:12px;
-border:none;
-border-radius:8px;
-font-weight:bold;
-cursor:pointer;
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:8px;
+  font-weight:bold;
+  cursor:pointer;
 }
-
 .btnConfirmar{
-background:#dc3545;
-color:white;
+  background:#dc3545;
+  color:white;
 }
-
 .btnConfirmar:hover{
-background:#c82333;
+  background:#c82333;
 }
-
 .btnCancelar{
-background:#6c757d;
-color:white;
+  background:#6c757d;
+  color:white;
 }
-
 .btnCancelar:hover{
-background:#5a6268;
+  background:#5a6268;
 }
-
 </style>
 </head>
-
 <body>
 
 <div class="container">
@@ -248,31 +209,22 @@ background:#5a6268;
 </div>
 
 <div class="card">
-
 <div id="alerta"></div>
-
 <input id="descricao" placeholder="Ex: Fotógrafo">
-
 <input id="valorTotal" type="number" placeholder="Valor total (R$)">
-
 <button id="btnAdicionar" onclick="addItem()">Adicionar compromisso ✨</button>
-
 </div>
 
 <div class="card">
-
 <div class="total">
 Total planejado: R$ <span id="totalPlanejado">0</span>
 </div>
-
 <div class="total">
 Total pago: R$ <span id="totalPago">0</span>
 </div>
-
 <div class="progresso">
 <div id="barraGeral" class="progressoBar" style="width:0%"></div>
 </div>
-
 </div>
 
 <div id="lista"></div>
@@ -280,35 +232,26 @@ Total pago: R$ <span id="totalPago">0</span>
 </div>
 
 <div id="modal" class="modal">
-
 <div class="modalContent">
-
 <h3 id="tituloItem"></h3>
-
 <input id="valorPagamento" type="number" placeholder="Valor pago">
-
 <button id="btnRegistrar" onclick="registrarPagamento()">Registrar pagamento 🎉</button>
-
 <h4>Histórico</h4>
-
 <div id="historico"></div>
-
 <button onclick="fecharModal()">Fechar</button>
-
 </div>
-
 </div>
 
 <div id="confirmModal" class="confirmModal">
-  <div class="confirmContent">
-    <h3>⚠️ Confirmar Exclusão</h3>
-    <p>Tem certeza que deseja remover este item?<br>
-    Essa ação não pode ser desfeita.</p>
-    <div class="confirmBotoes">
-      <button class="btnCancelar" onclick="cancelarDelecao()">Cancelar</button>
-      <button class="btnConfirmar" onclick="confirmarDelecao()">Deletar</button>
-    </div>
-  </div>
+<div class="confirmContent">
+<h3>⚠️ Confirmar Exclusão</h3>
+<p>Tem certeza que deseja remover este item?<br>
+Essa ação não pode ser desfeita.</p>
+<div class="confirmBotoes">
+<button class="btnCancelar" onclick="cancelarDelecao()">Cancelar</button>
+<button class="btnConfirmar" onclick="confirmarDelecao()">Deletar</button>
+</div>
+</div>
 </div>
 
 <iframe name="uploadFrame" id="uploadFrame"></iframe>
@@ -316,7 +259,7 @@ Total pago: R$ <span id="totalPago">0</span>
 <script>
 
 // ============================================
-// CONFIGURAÇÃO - COLOQUE A URL AQUI!
+// CONFIGURAÇÃO
 // ============================================
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzmIcnOGKcXBt2k23WLxOnQH9kuab-DQ6lePbvATwR18BEqprjn5h3jkn3UFnbyBsSrLQ/exec";
@@ -331,8 +274,6 @@ let itemParaDeletar = null;
 
 document.addEventListener('DOMContentLoaded', function() {
   carregarItens();
-  
-  // Recarregar a cada 10 segundos para sincronizar
   setInterval(carregarItensDaPlanilha, 10000);
 });
 
@@ -341,10 +282,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================================
 
 function carregarItens() {
-  // Primeiro tenta carregar da planilha (sincroniza entre dispositivos)
   carregarItensDaPlanilha();
-  
-  // Se offline, usa localStorage como fallback
   setTimeout(() => {
     if (itens.length === 0) {
       const itensArmazenados = localStorage.getItem("casamento_itens");
@@ -363,7 +301,6 @@ function carregarItensDaPlanilha() {
     .then(response => response.json())
     .then(data => {
       if (data.sucesso && data.itens) {
-        // Converter itens da planilha para formato esperado
         itens = data.itens.map(item => ({
           id: item.id,
           descricao: item.descricao,
@@ -373,21 +310,17 @@ function carregarItensDaPlanilha() {
           pagamentos: []
         }));
         
-        // Salvar também no localStorage
         salvarItens();
-        
-        // Renderizar
         render();
       }
     })
     .catch(error => {
-      console.log("Offline ou erro ao carregar da planilha:", error);
-      // Usa localStorage se estiver offline
+      console.log("Offline ou erro ao carregar:", error);
     });
 }
 
 // ============================================
-// SALVAR ITENS (localStorage)
+// SALVAR ITENS
 // ============================================
 
 function salvarItens() {
@@ -395,7 +328,7 @@ function salvarItens() {
 }
 
 // ============================================
-// ENVIAR PARA GOOGLE SHEETS (via formulário)
+// ENVIAR PARA SHEETS
 // ============================================
 
 function enviarParaSheets(item, tipo = "item") {
@@ -452,10 +385,7 @@ function addItem() {
 
   itens.push(novoItem);
   salvarItens();
-
-  // Enviar para Google Sheets
   enviarParaSheets(novoItem, "item");
-
   mostrarAlerta('✅ Compromisso adicionado!', 'sucesso');
   document.getElementById("descricao").value = "";
   document.getElementById("valorTotal").value = "";
@@ -463,13 +393,12 @@ function addItem() {
   setTimeout(() => {
     btnAdicionar.disabled = false;
     render();
-    // Recarregar da planilha após adicionar
     carregarItensDaPlanilha();
   }, 1500);
 }
 
 // ============================================
-// TOTAL PAGO DO ITEM
+// TOTAL PAGO
 // ============================================
 
 function totalPagoItem(item) {
@@ -492,11 +421,7 @@ function abrirDetalhes(i) {
 
   if (item.pagamentos && item.pagamentos.length > 0) {
     item.pagamentos.forEach(p => {
-      historico.innerHTML += `
-        <div class="pagoItem">
-          R$ ${p.valor.toFixed(2).replace('.', ',')} — ${p.data}
-        </div>
-      `;
+      historico.innerHTML += `<div class="pagoItem">R$ ${p.valor.toFixed(2).replace('.', ',')} — ${p.data}</div>`;
     });
   } else {
     historico.innerHTML = '<p style="color:#999;">Nenhum pagamento registrado</p>';
@@ -543,7 +468,6 @@ function registrarPagamento() {
 
   salvarItens();
 
-  // Enviar para Google Sheets
   const pagamento = {
     id: Date.now().toString(),
     descricao: item.descricao,
@@ -562,16 +486,13 @@ function registrarPagamento() {
     btnRegistrar.disabled = false;
     render();
     abrirDetalhes(itemSelecionado);
-    // Recarregar da planilha após registrar
     carregarItensDaPlanilha();
   }, 1500);
 }
 
 // ============================================
-// REMOVER ITEM COM CONFIRMAÇÃO
+// REMOVER COM CONFIRMAÇÃO
 // ============================================
-
-let itemParaDeletar = null;
 
 function remover(i) {
   itemParaDeletar = i;
@@ -591,17 +512,13 @@ function confirmarDelecao() {
   btnConfirmar.disabled = true;
   btnConfirmar.innerText = "Deletando...";
   
-  // Enviar para Google Sheets para deletar
   deletarDaPlanilha(item.id);
   
-  // Remover do localStorage
   itens.splice(itemParaDeletar, 1);
   salvarItens();
   
-  // Fechar modal
   document.getElementById("confirmModal").style.display = "none";
   
-  // Atualizar UI
   setTimeout(() => {
     render();
     carregarItensDaPlanilha();
@@ -659,12 +576,7 @@ function render() {
   let lista = document.getElementById("lista");
 
   if (itens.length === 0) {
-    lista.innerHTML = `
-      <div class="empty-state">
-        <div>🎁</div>
-        <p>Nenhum compromisso ainda. Adicione o primeiro!</p>
-      </div>
-    `;
+    lista.innerHTML = `<div class="empty-state"><div>🎁</div><p>Nenhum compromisso ainda. Adicione o primeiro!</p></div>`;
     document.getElementById("totalPlanejado").innerText = "0";
     document.getElementById("totalPago").innerText = "0";
     document.getElementById("barraGeral").style.width = "0%";
@@ -672,7 +584,6 @@ function render() {
   }
 
   lista.innerHTML = "";
-
   let totalPlanejado = 0;
   let totalPago = 0;
 
@@ -691,11 +602,9 @@ function render() {
             R$ ${pago.toFixed(2).replace('.', ',')} / R$ ${item.valor.toFixed(2).replace('.', ',')}
           </div>
         </div>
-
         <div class="progresso">
           <div class="progressoBar" style="width:${progresso}%"></div>
         </div>
-
         <div class="botoes">
           <button onclick="abrirDetalhes(${i})">Ver mais</button>
           <button onclick="remover(${i})">Excluir</button>
@@ -729,4 +638,3 @@ document.addEventListener('click', function(event) {
 
 </body>
 </html>
-
