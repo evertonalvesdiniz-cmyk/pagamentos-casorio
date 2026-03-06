@@ -1,76 +1,50 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Planejamento do Casamento 💍</title>
+<meta charset="UTF-8">
+<title>Pagamentos</title>
 
 <style>
 
 body{
 font-family:Arial;
-background:linear-gradient(135deg,#f5f7fa,#e4ecf7);
-padding:20px;
-margin:0;
+background:#f4f4f4;
+padding:30px;
 }
 
 .container{
-max-width:700px;
+max-width:900px;
 margin:auto;
-}
-
-h1{
-text-align:center;
-}
-
-.card{
 background:white;
+padding:20px;
+border-radius:10px;
+}
+
+.item{
+border:1px solid #ddd;
 padding:15px;
-border-radius:12px;
 margin-bottom:15px;
-box-shadow:0 3px 10px rgba(0,0,0,0.1);
-}
-
-input{
-width:100%;
-padding:10px;
-margin:5px 0;
 border-radius:8px;
-border:1px solid #ccc;
-}
-
-button{
-padding:10px 15px;
-border:none;
-border-radius:8px;
-background:#4CAF50;
-color:white;
-font-weight:bold;
-cursor:pointer;
-}
-
-button:hover{
-background:#43a047;
 }
 
 .progress{
+height:20px;
 background:#eee;
-height:10px;
 border-radius:10px;
-margin-top:5px;
 overflow:hidden;
 }
 
-.bar{
-height:100%;
-background:#4CAF50;
+.progress-bar{
+height:20px;
+background:#4caf50;
 width:0%;
 }
 
-.small{
-font-size:12px;
-color:#666;
+button{
+padding:8px 12px;
+margin-top:10px;
+cursor:pointer;
 }
 
 .modal{
@@ -88,34 +62,27 @@ justify-content:center;
 .modal-content{
 background:white;
 padding:20px;
-border-radius:10px;
-width:90%;
-max-width:400px;
+width:400px;
+border-radius:8px;
 }
 
 </style>
+
 </head>
 
 <body>
 
 <div class="container">
 
-<h1>💍 Nosso Casamento</h1>
-<p style="text-align:center">Pagando tudo com amor (e um pouco de desespero 😂)</p>
+<h2>Itens</h2>
 
-<div class="card">
-
-<h3>Novo item</h3>
-
-<input id="descricao" placeholder="Ex: Buffet, Fotógrafo, Vestido">
-
-<input id="valorTotal" type="number" placeholder="Valor total">
-
+<input id="descricao" placeholder="Descrição">
+<input id="valor" type="number" placeholder="Valor">
 <button onclick="addItem()">Adicionar</button>
 
-</div>
+<h3>Total Geral: R$ <span id="total">0</span></h3>
 
-<div id="listaItens"></div>
+<div id="lista"></div>
 
 </div>
 
@@ -126,15 +93,15 @@ max-width:400px;
 
 <h3 id="tituloItem"></h3>
 
-<input id="valorPagamento" type="number" placeholder="Valor do pagamento">
+<input id="valorPagamento" type="number" placeholder="Valor pagamento">
 
-<button onclick="adicionarPagamento()">Registrar pagamento</button>
+<button onclick="addPagamento()">Salvar pagamento</button>
 
 <h4>Histórico</h4>
 
 <div id="historico"></div>
 
-<button onclick="fecharModal()">Fechar</button>
+<button onclick="fechar()">Fechar</button>
 
 </div>
 
@@ -143,61 +110,115 @@ max-width:400px;
 
 <script>
 
-const API_URL = "COLE_AQUI_SEU_SCRIPT";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxt-FJwJzTVkXvpVGL74DqAnfcX0ixsia8D68LKnMP-O0uDn3kEFL8b6ddvIUfEldiz-g/exec";
+
+let itens = JSON.parse(localStorage.getItem("itens")||"[]");
+let pagamentos = JSON.parse(localStorage.getItem("pagamentos")||"[]");
 
 let itemAtual = null;
-let itens = [];
-let pagamentos = [];
 
+render();
 
-async function carregar(){
+function addItem(){
 
-const res = await fetch(API_URL);
-const data = await res.json();
+const descricao=document.getElementById("descricao").value;
+const valor=Number(document.getElementById("valor").value);
 
-itens = data.itens;
-pagamentos = data.pagamentos;
+const id=Date.now().toString();
+
+const data=new Date().toISOString();
+
+const item={
+id,
+descricao,
+valor
+};
+
+itens.push(item);
+
+localStorage.setItem("itens",JSON.stringify(itens));
+
+fetch(SCRIPT_URL,{
+method:"POST",
+body:new URLSearchParams({
+tipo:"item",
+itemId:id,
+descricao,
+valor,
+data
+})
+});
 
 render();
 
 }
 
+function addPagamento(){
+
+const valor=Number(document.getElementById("valorPagamento").value);
+
+const data=new Date().toISOString();
+
+const pagamento={
+id:Date.now().toString(),
+itemId:itemAtual,
+valor,
+data
+};
+
+pagamentos.push(pagamento);
+
+localStorage.setItem("pagamentos",JSON.stringify(pagamentos));
+
+fetch(SCRIPT_URL,{
+method:"POST",
+body:new URLSearchParams({
+tipo:"pagamento",
+itemId:itemAtual,
+valor,
+data
+})
+});
+
+render();
+
+abrir(itemAtual);
+
+}
 
 function render(){
 
-const lista = document.getElementById("listaItens");
-
+const lista=document.getElementById("lista");
 lista.innerHTML="";
+
+let total=0;
 
 itens.forEach(item=>{
 
-const pagos = pagamentos
+const pagos=pagamentos
 .filter(p=>p.itemId==item.id)
-.reduce((s,p)=>s+Number(p.valor),0);
+.reduce((s,p)=>s+p.valor,0);
 
-const progresso = Math.min((pagos/item.total)*100,100);
+total+=item.valor;
 
-const div = document.createElement("div");
+const perc=(pagos/item.valor)*100;
 
-div.className="card";
+const div=document.createElement("div");
+div.className="item";
 
 div.innerHTML=`
 
-<b>${item.descricao}</b>
+<h3>${item.descricao}</h3>
 
-<div class="small">
-Pago: R$ ${pagos} / ${item.total}
-</div>
+<p>Total: R$ ${item.valor}</p>
+
+<p>Pago: R$ ${pagos}</p>
 
 <div class="progress">
-<div class="bar" style="width:${progresso}%"></div>
+<div class="progress-bar" style="width:${perc}%"></div>
 </div>
 
-<br>
-
-<button onclick="verMais('${item.id}')">
-Ver mais
-</button>
+<button onclick="abrir('${item.id}')">Ver Mais</button>
 
 `;
 
@@ -205,114 +226,43 @@ lista.appendChild(div);
 
 });
 
-}
-
-
-
-async function addItem(){
-
-const descricao = document.getElementById("descricao").value;
-const total = parseFloat(document.getElementById("valorTotal").value);
-
-const dados = {
-
-action:"addItem",
-id:Date.now(),
-descricao:descricao,
-total:total
-
-};
-
-await fetch(API_URL,{
-method:"POST",
-body:JSON.stringify(dados)
-});
-
-document.getElementById("descricao").value="";
-document.getElementById("valorTotal").value="";
-
-carregar();
+document.getElementById("total").innerText=total;
 
 }
 
-
-
-function verMais(id){
+function abrir(id){
 
 itemAtual=id;
 
-const item = itens.find(i=>i.id==id);
+document.getElementById("modal").style.display="flex";
+
+const item=itens.find(i=>i.id==id);
 
 document.getElementById("tituloItem").innerText=item.descricao;
 
-document.getElementById("modal").style.display="flex";
+const hist=document.getElementById("historico");
 
-renderHistorico();
+hist.innerHTML="";
 
-}
+pagamentos
+.filter(p=>p.itemId==id)
+.forEach(p=>{
 
+const d=document.createElement("div");
 
+d.innerText=`${p.data} - R$ ${p.valor}`;
 
-function renderHistorico(){
-
-const div = document.getElementById("historico");
-
-const lista = pagamentos.filter(p=>p.itemId==itemAtual);
-
-div.innerHTML="";
-
-lista.forEach(p=>{
-
-const linha=document.createElement("div");
-
-linha.className="small";
-
-linha.innerText = p.data + " - R$ " + p.valor;
-
-div.appendChild(linha);
+hist.appendChild(d);
 
 });
 
 }
 
-
-
-async function adicionarPagamento(){
-
-const valor = parseFloat(document.getElementById("valorPagamento").value);
-
-const dados={
-
-action:"addPagamento",
-itemId:itemAtual,
-valor:valor
-
-};
-
-const API_URL = "https://script.google.com/macros/s/AKfycby_OQ1rFM8UdskaGYvW8nvtys76m28aGryo_pQQH-AeRHG8PWj8AuNcLklaReDcp4bhXw/exec";
-method:"POST",
-body:JSON.stringify(dados)
-});
-
-document.getElementById("valorPagamento").value="";
-
-carregar();
-
-renderHistorico();
-
-}
-
-
-
-function fecharModal(){
+function fechar(){
 
 document.getElementById("modal").style.display="none";
 
 }
-
-
-
-carregar();
 
 </script>
 
