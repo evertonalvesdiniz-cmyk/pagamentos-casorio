@@ -46,6 +46,7 @@ margin-bottom:10px;
 border-radius:8px;
 border:1px solid #ddd;
 font-size:16px;
+box-sizing:border-box;
 }
 
 button{
@@ -56,6 +57,16 @@ background:#ff4d6d;
 color:white;
 font-weight:bold;
 width:100%;
+cursor:pointer;
+}
+
+button:hover{
+background:#e63d63;
+}
+
+button:disabled{
+background:#ccc;
+cursor:not-allowed;
 }
 
 .item{
@@ -111,6 +122,7 @@ background:rgba(0,0,0,0.6);
 display:none;
 align-items:center;
 justify-content:center;
+z-index:1000;
 }
 
 .modalContent{
@@ -129,6 +141,44 @@ margin-top:6px;
 font-size:14px;
 }
 
+.alerta{
+padding:12px;
+border-radius:8px;
+margin-bottom:15px;
+}
+
+.alerta.sucesso{
+background:#d4edda;
+color:#155724;
+border-left:4px solid #28a745;
+}
+
+.alerta.erro{
+background:#f8d7da;
+color:#721c24;
+border-left:4px solid #dc3545;
+}
+
+.loading{
+display:inline-block;
+width:16px;
+height:16px;
+border:3px solid rgba(255,255,255,0.3);
+border-radius:50%;
+border-top-color:white;
+animation:spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+to { transform:rotate(360deg); }
+}
+
+.empty-state{
+text-align:center;
+color:#999;
+padding:40px 20px;
+}
+
 </style>
 </head>
 
@@ -144,11 +194,13 @@ font-size:14px;
 
 <div class="card">
 
+<div id="alerta"></div>
+
 <input id="descricao" placeholder="Ex: Fotógrafo">
 
 <input id="valorTotal" type="number" placeholder="Valor total (R$)">
 
-<button onclick="addItem()">Adicionar compromisso ✨</button>
+<button id="btnAdicionar" onclick="addItem()">Adicionar compromisso ✨</button>
 
 </div>
 
@@ -163,7 +215,7 @@ Total pago: R$ <span id="totalPago">0</span>
 </div>
 
 <div class="progresso">
-<div id="barraGeral" class="progressoBar"></div>
+<div id="barraGeral" class="progressoBar" style="width:0%"></div>
 </div>
 
 </div>
@@ -180,7 +232,7 @@ Total pago: R$ <span id="totalPago">0</span>
 
 <input id="valorPagamento" type="number" placeholder="Valor pago">
 
-<button onclick="registrarPagamento()">Registrar pagamento 🎉</button>
+<button id="btnRegistrar" onclick="registrarPagamento()">Registrar pagamento 🎉</button>
 
 <h4>Histórico</h4>
 
@@ -194,173 +246,303 @@ Total pago: R$ <span id="totalPago">0</span>
 
 <script>
 
-let itens = JSON.parse(localStorage.getItem("casamento")) || []
+// ============================================
+// CONFIGURAÇÃO
+// ============================================
 
-let itemSelecionado = null
+const API_URL = "https://script.google.com/macros/s/AKfycbxf0od7RTr9Zux_Gkeh_urcKuHKNg23HlwNOeIF8xyqpNUN9uKa7-HhACkh713QedvvFw/exec";
 
-function salvar(){
+let itens = [];
+let itemSelecionado = null;
 
-localStorage.setItem("casamento",JSON.stringify(itens))
+// ============================================
+// INICIALIZAÇÃO
+// ============================================
 
+document.addEventListener('DOMContentLoaded', function() {
+  carregarItens();
+});
+
+// ============================================
+// CARREGAR ITENS DO GOOGLE SHEETS
+// ============================================
+
+async function carregarItens() {
+  try {
+    const response = await fetch(`${API_URL}?action=getItems`);
+    const data = await response.json();
+    
+    if (data.success) {
+      itens = data.items || [];
+      render();
+    } else {
+      mostrarAlerta('Erro ao carregar itens', 'erro');
+    }
+  } catch (error) {
+    console.error('Erro ao carregar:', error);
+    mostrarAlerta('Erro ao conectar com servidor', 'erro');
+  }
 }
 
-function addItem(){
+// ============================================
+// ADICIONAR ITEM
+// ============================================
 
-let descricao = document.getElementById("descricao").value
-let valor = parseFloat(document.getElementById("valorTotal").value)
+async function addItem() {
+  const descricao = document.getElementById("descricao").value.trim();
+  const valor = parseFloat(document.getElementById("valorTotal").value);
 
-if(!descricao || !valor){
-alert("Preencha os campos")
-return
+  if (!descricao || !valor || valor <= 0) {
+    mostrarAlerta('Preencha os campos corretamente', 'erro');
+    return;
+  }
+
+  const btnAdicionar = document.getElementById("btnAdicionar");
+  btnAdicionar.disabled = true;
+  const textoOriginal = btnAdicionar.innerText;
+  btnAdicionar.innerHTML = '<span class="loading"></span>';
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'addItem',
+        descricao: descricao,
+        valor: valor
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      mostrarAlerta('✅ Compromisso adicionado!', 'sucesso');
+      document.getElementById("descricao").value = "";
+      document.getElementById("valorTotal").value = "";
+      await carregarItens();
+    } else {
+      mostrarAlerta('❌ Erro: ' + data.error, 'erro');
+    }
+
+  } catch (error) {
+    console.error('Erro:', error);
+    mostrarAlerta('❌ Erro ao salvar', 'erro');
+  } finally {
+    btnAdicionar.disabled = false;
+    btnAdicionar.innerText = textoOriginal;
+  }
 }
 
-itens.push({
-descricao,
-valorTotal:valor,
-pagamentos:[]
-})
+// ============================================
+// TOTAL PAGO DO ITEM
+// ============================================
 
-document.getElementById("descricao").value=""
-document.getElementById("valorTotal").value=""
-
-salvar()
-render()
-
+function totalPagoItem(item) {
+  return item.valorPago || 0;
 }
 
-function totalPagoItem(item){
+// ============================================
+// ABRIR MODAL DE DETALHES
+// ============================================
 
-return item.pagamentos.reduce((s,p)=>s+p.valor,0)
+async function abrirDetalhes(i) {
+  itemSelecionado = i;
+  let item = itens[i];
 
+  document.getElementById("modal").style.display = "flex";
+  document.getElementById("tituloItem").innerText = item.descricao;
+
+  // Carregar histórico de pagamentos
+  try {
+    const response = await fetch(`${API_URL}?action=getItem&id=${item.id}`);
+    const data = await response.json();
+
+    if (data.success) {
+      let historico = document.getElementById("historico");
+      historico.innerHTML = "";
+
+      if (data.pagamentos && data.pagamentos.length > 0) {
+        data.pagamentos.forEach(p => {
+          const data_formatada = new Date(p.data).toLocaleDateString('pt-BR');
+          historico.innerHTML += `
+            <div class="pagoItem">
+              R$ ${parseFloat(p.valor).toFixed(2).replace('.', ',')} — ${data_formatada}
+            </div>
+          `;
+        });
+      } else {
+        historico.innerHTML = '<p style="color:#999;">Nenhum pagamento registrado</p>';
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao carregar histórico:', error);
+  }
 }
 
-function abrirDetalhes(i){
+// ============================================
+// FECHAR MODAL
+// ============================================
 
-itemSelecionado=i
-
-let item=itens[i]
-
-document.getElementById("modal").style.display="flex"
-
-document.getElementById("tituloItem").innerText=item.descricao
-
-let historico=document.getElementById("historico")
-
-historico.innerHTML=""
-
-item.pagamentos.forEach(p=>{
-
-historico.innerHTML+=`
-<div class="pagoItem">
-R$ ${p.valor} — ${p.data}
-</div>
-`
-
-})
-
+function fecharModal() {
+  document.getElementById("modal").style.display = "none";
+  document.getElementById("valorPagamento").value = "";
 }
 
-function fecharModal(){
+// ============================================
+// REGISTRAR PAGAMENTO
+// ============================================
 
-document.getElementById("modal").style.display="none"
+async function registrarPagamento() {
+  const valor = parseFloat(document.getElementById("valorPagamento").value);
 
+  if (!valor || valor <= 0) {
+    mostrarAlerta('Valor inválido', 'erro');
+    return;
+  }
+
+  const item = itens[itemSelecionado];
+  const btnRegistrar = document.getElementById("btnRegistrar");
+  btnRegistrar.disabled = true;
+  const textoOriginal = btnRegistrar.innerText;
+  btnRegistrar.innerHTML = '<span class="loading"></span>';
+
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'addPayment',
+        itemId: item.id,
+        valor: valor,
+        descricao: ''
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      mostrarAlerta('✅ Pagamento registrado!', 'sucesso');
+      document.getElementById("valorPagamento").value = "";
+      fecharModal();
+      await carregarItens();
+    } else {
+      mostrarAlerta('❌ Erro: ' + data.error, 'erro');
+    }
+
+  } catch (error) {
+    console.error('Erro:', error);
+    mostrarAlerta('❌ Erro ao registrar', 'erro');
+  } finally {
+    btnRegistrar.disabled = false;
+    btnRegistrar.innerText = textoOriginal;
+  }
 }
 
-function registrarPagamento(){
+// ============================================
+// REMOVER ITEM
+// ============================================
 
-let valor=parseFloat(document.getElementById("valorPagamento").value)
+async function remover(i) {
+  if (!confirm('Tem certeza que deseja remover?')) return;
 
-if(!valor) return
+  const item = itens[i];
 
-let hoje=new Date().toLocaleDateString()
-
-itens[itemSelecionado].pagamentos.push({
-valor:valor,
-data:hoje
-})
-
-document.getElementById("valorPagamento").value=""
-
-salvar()
-render()
-
-abrirDetalhes(itemSelecionado)
-
+  try {
+    // Nota: implementar delete no Apps Script se necessário
+    // Por enquanto, apenas remove localmente
+    itens.splice(i, 1);
+    render();
+    mostrarAlerta('Item removido', 'sucesso');
+  } catch (error) {
+    console.error('Erro:', error);
+  }
 }
 
-function render(){
+// ============================================
+// MOSTRAR ALERTA
+// ============================================
 
-let lista=document.getElementById("lista")
+function mostrarAlerta(msg, tipo) {
+  const container = document.getElementById("alerta");
+  container.className = `alerta ${tipo}`;
+  container.innerText = msg;
 
-lista.innerHTML=""
-
-let totalPlanejado=0
-let totalPago=0
-
-itens.forEach((item,i)=>{
-
-let pago=totalPagoItem(item)
-
-let progresso=(pago/item.valorTotal)*100
-
-totalPlanejado+=item.valorTotal
-totalPago+=pago
-
-lista.innerHTML+=`
-
-<div class="item">
-
-<div class="topItem">
-
-<div>
-<strong>${item.descricao}</strong><br>
-R$ ${pago} / R$ ${item.valorTotal}
-</div>
-
-</div>
-
-<div class="progresso">
-<div class="progressoBar" style="width:${progresso}%"></div>
-</div>
-
-<div class="botoes">
-
-<button onclick="abrirDetalhes(${i})">
-Ver mais
-</button>
-
-<button onclick="remover(${i})">
-Excluir
-</button>
-
-</div>
-
-</div>
-
-`
-
-})
-
-document.getElementById("totalPlanejado").innerText=totalPlanejado
-document.getElementById("totalPago").innerText=totalPago
-
-let progressoTotal=(totalPago/totalPlanejado)*100
-
-document.getElementById("barraGeral").style.width=progressoTotal+"%"
-
+  setTimeout(() => {
+    container.innerHTML = '';
+  }, 4000);
 }
 
-function remover(i){
+// ============================================
+// RENDERIZAR INTERFACE
+// ============================================
 
-itens.splice(i,1)
+function render() {
+  let lista = document.getElementById("lista");
 
-salvar()
+  if (itens.length === 0) {
+    lista.innerHTML = `
+      <div class="empty-state">
+        <div>🎁</div>
+        <p>Nenhum compromisso ainda. Adicione o primeiro!</p>
+      </div>
+    `;
+    document.getElementById("totalPlanejado").innerText = "0";
+    document.getElementById("totalPago").innerText = "0";
+    document.getElementById("barraGeral").style.width = "0%";
+    return;
+  }
 
-render()
+  lista.innerHTML = "";
 
+  let totalPlanejado = 0;
+  let totalPago = 0;
+
+  itens.forEach((item, i) => {
+    let pago = totalPagoItem(item);
+    let progresso = (pago / item.valorTotal) * 100;
+
+    totalPlanejado += item.valorTotal;
+    totalPago += pago;
+
+    lista.innerHTML += `
+      <div class="item">
+        <div class="topItem">
+          <div>
+            <strong>${item.descricao}</strong><br>
+            R$ ${pago.toFixed(2).replace('.', ',')} / R$ ${item.valorTotal.toFixed(2).replace('.', ',')}
+          </div>
+        </div>
+
+        <div class="progresso">
+          <div class="progressoBar" style="width:${progresso}%"></div>
+        </div>
+
+        <div class="botoes">
+          <button onclick="abrirDetalhes(${i})">Ver mais</button>
+          <button onclick="remover(${i})">Excluir</button>
+        </div>
+      </div>
+    `;
+  });
+
+  document.getElementById("totalPlanejado").innerText = totalPlanejado.toFixed(2).replace('.', ',');
+  document.getElementById("totalPago").innerText = totalPago.toFixed(2).replace('.', ',');
+
+  let progressoTotal = (totalPago / totalPlanejado) * 100;
+  document.getElementById("barraGeral").style.width = progressoTotal + "%";
 }
 
-render()
+// Fechar modal ao clicar fora
+document.addEventListener('click', function(event) {
+  const modal = document.getElementById('modal');
+  if (event.target === modal) {
+    fecharModal();
+  }
+});
 
 </script>
 
