@@ -169,6 +169,71 @@ padding:40px 20px;
 display:none;
 }
 
+.confirmModal{
+position:fixed;
+top:0;
+left:0;
+right:0;
+bottom:0;
+background:rgba(0,0,0,0.6);
+display:none;
+align-items:center;
+justify-content:center;
+z-index:2000;
+}
+
+.confirmContent{
+background:white;
+padding:30px;
+border-radius:12px;
+width:90%;
+max-width:400px;
+text-align:center;
+}
+
+.confirmContent h3{
+margin-top:0;
+color:#333;
+}
+
+.confirmContent p{
+color:#666;
+margin-bottom:20px;
+}
+
+.confirmBotoes{
+display:flex;
+gap:12px;
+justify-content:center;
+}
+
+.confirmBotoes button{
+flex:1;
+padding:12px;
+border:none;
+border-radius:8px;
+font-weight:bold;
+cursor:pointer;
+}
+
+.btnConfirmar{
+background:#dc3545;
+color:white;
+}
+
+.btnConfirmar:hover{
+background:#c82333;
+}
+
+.btnCancelar{
+background:#6c757d;
+color:white;
+}
+
+.btnCancelar:hover{
+background:#5a6268;
+}
+
 </style>
 </head>
 
@@ -234,6 +299,18 @@ Total pago: R$ <span id="totalPago">0</span>
 
 </div>
 
+<div id="confirmModal" class="confirmModal">
+  <div class="confirmContent">
+    <h3>⚠️ Confirmar Exclusão</h3>
+    <p>Tem certeza que deseja remover este item?<br>
+    Essa ação não pode ser desfeita.</p>
+    <div class="confirmBotoes">
+      <button class="btnCancelar" onclick="cancelarDelecao()">Cancelar</button>
+      <button class="btnConfirmar" onclick="confirmarDelecao()">Deletar</button>
+    </div>
+  </div>
+</div>
+
 <iframe name="uploadFrame" id="uploadFrame"></iframe>
 
 <script>
@@ -242,10 +319,11 @@ Total pago: R$ <span id="totalPago">0</span>
 // CONFIGURAÇÃO - COLOQUE A URL AQUI!
 // ============================================
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwjPu3jBns83L9iLh354AGMHjsGmni7LX985okR29YhoQ8cdSJYkPvLNvcg-Guzl4A40g/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwW5ICJh4go5aJi_1TOSts7gN3MyZv3EXgbQYvxXjPttEKdCUo7cr1PNCoApqjpKJX05w/exec";
 
 let itens = [];
 let itemSelecionado = null;
+let itemParaDeletar = null;
 
 // ============================================
 // INICIALIZAÇÃO
@@ -490,14 +568,73 @@ function registrarPagamento() {
 }
 
 // ============================================
-// REMOVER ITEM
+// REMOVER ITEM COM CONFIRMAÇÃO
 // ============================================
 
+let itemParaDeletar = null;
+
 function remover(i) {
-  if (!confirm('Tem certeza que deseja remover?')) return;
-  itens.splice(i, 1);
+  itemParaDeletar = i;
+  document.getElementById("confirmModal").style.display = "flex";
+}
+
+function cancelarDelecao() {
+  itemParaDeletar = null;
+  document.getElementById("confirmModal").style.display = "none";
+}
+
+function confirmarDelecao() {
+  if (itemParaDeletar === null) return;
+  
+  const item = itens[itemParaDeletar];
+  const btnConfirmar = document.querySelector(".btnConfirmar");
+  btnConfirmar.disabled = true;
+  btnConfirmar.innerText = "Deletando...";
+  
+  // Enviar para Google Sheets para deletar
+  deletarDaPlanilha(item.id);
+  
+  // Remover do localStorage
+  itens.splice(itemParaDeletar, 1);
   salvarItens();
-  render();
+  
+  // Fechar modal
+  document.getElementById("confirmModal").style.display = "none";
+  
+  // Atualizar UI
+  setTimeout(() => {
+    render();
+    carregarItensDaPlanilha();
+    btnConfirmar.disabled = false;
+    btnConfirmar.innerText = "Deletar";
+    mostrarAlerta('✅ Item deletado!', 'sucesso');
+  }, 1500);
+  
+  itemParaDeletar = null;
+}
+
+function deletarDaPlanilha(itemId) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = SCRIPT_URL;
+  form.target = "uploadFrame";
+
+  const dados = {
+    tipo: "deletarItem",
+    itemId: itemId
+  };
+
+  for(let key in dados){
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = dados[key];
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
 }
 
 // ============================================
@@ -577,8 +714,14 @@ function render() {
 // Fechar modal ao clicar fora
 document.addEventListener('click', function(event) {
   const modal = document.getElementById('modal');
+  const confirmModal = document.getElementById('confirmModal');
+  
   if (event.target === modal) {
     fecharModal();
+  }
+  
+  if (event.target === confirmModal) {
+    cancelarDelecao();
   }
 });
 
