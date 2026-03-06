@@ -1,4 +1,4 @@
-const API = "https://script.google.com/macros/s/AKfycbxx1tDThfk9KI2S25AUoFh5RI3_K8R5r5eBhcpVC3t63_6pUsa02-dOAHSdNkOKlLO52g/exec";
+const API = "https://script.google.com/macros/s/AKfycbxf0od7RTr9Zux_Gkeh_urcKuHKNg23HlwNOeIF8xyqpNUN9uKa7-HhACkh713QedvvFw/exec";
 
 function adicionarItem(){
 
@@ -12,4 +12,5 @@ valor:3000
 })
 
 }
+
 
