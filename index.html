@@ -239,10 +239,10 @@ Total pago: R$ <span id="totalPago">0</span>
 <script>
 
 // ============================================
-// CONFIGURAÇÃO
+// CONFIGURAÇÃO - COLOQUE A URL AQUI!
 // ============================================
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzEGPHFK6yQEA1fArE2Csmu8UiByVVD4s7niol2d7XCVUfqs9XHOAyrJ2gMes857hlijA/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwjPu3jBns83L9iLh354AGMHjsGmni7LX985okR29YhoQ8cdSJYkPvLNvcg-Guzl4A40g/exec";
 
 let itens = [];
 let itemSelecionado = null;
@@ -253,6 +253,9 @@ let itemSelecionado = null;
 
 document.addEventListener('DOMContentLoaded', function() {
   carregarItens();
+  
+  // Recarregar a cada 10 segundos para sincronizar
+  setInterval(carregarItensDaPlanilha, 10000);
 });
 
 // ============================================
@@ -260,16 +263,53 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================================
 
 function carregarItens() {
-  // Recuperar do localStorage
-  const itensArmazenados = localStorage.getItem("casamento_itens");
-  if (itensArmazenados) {
-    itens = JSON.parse(itensArmazenados);
-    render();
-  }
+  // Primeiro tenta carregar da planilha (sincroniza entre dispositivos)
+  carregarItensDaPlanilha();
+  
+  // Se offline, usa localStorage como fallback
+  setTimeout(() => {
+    if (itens.length === 0) {
+      const itensArmazenados = localStorage.getItem("casamento_itens");
+      if (itensArmazenados) {
+        itens = JSON.parse(itensArmazenados);
+        render();
+      }
+    }
+  }, 2000);
+}
+
+function carregarItensDaPlanilha() {
+  const url = SCRIPT_URL + "?acao=getItens";
+  
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.sucesso && data.itens) {
+        // Converter itens da planilha para formato esperado
+        itens = data.itens.map(item => ({
+          id: item.id,
+          descricao: item.descricao,
+          valor: parseFloat(item.valor),
+          valorTotal: parseFloat(item.valor),
+          valorPago: parseFloat(item.valorPago) || 0,
+          pagamentos: []
+        }));
+        
+        // Salvar também no localStorage
+        salvarItens();
+        
+        // Renderizar
+        render();
+      }
+    })
+    .catch(error => {
+      console.log("Offline ou erro ao carregar da planilha:", error);
+      // Usa localStorage se estiver offline
+    });
 }
 
 // ============================================
-// SALVAR ITENS
+// SALVAR ITENS (localStorage)
 // ============================================
 
 function salvarItens() {
@@ -345,6 +385,8 @@ function addItem() {
   setTimeout(() => {
     btnAdicionar.disabled = false;
     render();
+    // Recarregar da planilha após adicionar
+    carregarItensDaPlanilha();
   }, 1500);
 }
 
@@ -442,6 +484,8 @@ function registrarPagamento() {
     btnRegistrar.disabled = false;
     render();
     abrirDetalhes(itemSelecionado);
+    // Recarregar da planilha após registrar
+    carregarItensDaPlanilha();
   }, 1500);
 }
 
@@ -542,4 +586,3 @@ document.addEventListener('click', function(event) {
 
 </body>
 </html>
-
