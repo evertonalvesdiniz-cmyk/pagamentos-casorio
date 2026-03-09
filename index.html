@@ -112,22 +112,17 @@ button:disabled{
   font-size:20px;
   font-weight:bold;
 }
-.graficos-container{
-  display:flex;
-  gap:15px;
-  margin-bottom:20px;
-}
 .grafico-card{
   background:white;
-  padding:15px;
+  padding:20px;
   border-radius:12px;
   box-shadow:0 4px 10px rgba(0,0,0,0.05);
-  flex:1;
+  margin-bottom:20px;
 }
 .grafico-card h3{
-  margin:0 0 10px 0;
-  font-size:14px;
-  color:#666;
+  margin:0 0 15px 0;
+  font-size:16px;
+  color:#333;
   text-align:center;
 }
 .grafico-card canvas{
@@ -277,15 +272,9 @@ Total pago: R$ <span id="totalPago">0</span>
 </div>
 </div>
 
-<div class="graficos-container">
-  <div class="grafico-card">
-    <h3>💰 Gastos</h3>
-    <canvas id="graficoGastos"></canvas>
-  </div>
-  <div class="grafico-card">
-    <h3>📅 Tempo</h3>
-    <canvas id="graficoTempo"></canvas>
-  </div>
+<div class="grafico-card">
+  <h3>💰 Orçamento</h3>
+  <canvas id="graficoOrcamento"></canvas>
 </div>
 
 <div id="lista"></div>
@@ -320,14 +309,13 @@ Essa ação não pode ser desfeita.</p>
 <script>
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyNfGMVcRyCfBDrXaywGan1iLNHy0o-kt5xlPl4PCROvnLmkn8BwQtRk0y67NCMvqH/exec";
-const DATA_CASAMENTO = new Date(2025, 3, 30); // 30 de abril de 2025
 
 let itens = [];
 let pagamentosGlobais = [];
 let itemSelecionado = null;
 let itemParaDeletar = null;
-let graficoGastosChart = null;
-let graficoTempoChart = null;
+let graficoOrcamentoChart = null;
+let ultimoTotalPago = 0;
 
 document.addEventListener('DOMContentLoaded', function() {
   localStorage.clear();
@@ -387,7 +375,18 @@ function carregarTudo() {
     }
     
     render();
-    atualizarGraficos();
+    
+    // Calcular total pago
+    let totalPago = 0;
+    itens.forEach(item => {
+      totalPago += item.valorPago;
+    });
+    
+    // Atualizar gráfico APENAS se o total mudou
+    if (totalPago !== ultimoTotalPago) {
+      ultimoTotalPago = totalPago;
+      atualizarGrafico();
+    }
   })
   .catch(error => {
     console.error("Erro ao sincronizar:", error);
@@ -605,10 +604,10 @@ function mostrarAlerta(msg, tipo) {
 }
 
 // ============================================
-// ATUALIZAR GRÁFICOS
+// ATUALIZAR GRÁFICO (APENAS QUANDO MUDA)
 // ============================================
 
-function atualizarGraficos() {
+function atualizarGrafico() {
   let totalPlanejado = 0;
   let totalPago = 0;
   
@@ -617,12 +616,12 @@ function atualizarGraficos() {
     totalPago += item.valorPago;
   });
 
-  // Gráfico de Gastos (Pizza)
-  const ctxGastos = document.getElementById('graficoGastos').getContext('2d');
-  if (graficoGastosChart) {
-    graficoGastosChart.destroy();
+  // Gráfico de Orçamento (Pizza)
+  const ctxOrcamento = document.getElementById('graficoOrcamento').getContext('2d');
+  if (graficoOrcamentoChart) {
+    graficoOrcamentoChart.destroy();
   }
-  graficoGastosChart = new Chart(ctxGastos, {
+  graficoOrcamentoChart = new Chart(ctxOrcamento, {
     type: 'doughnut',
     data: {
       labels: ['Pago', 'Faltando'],
@@ -636,51 +635,6 @@ function atualizarGraficos() {
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      plugins: {
-        legend: {
-          position: 'bottom',
-          labels: { font: { size: 11 } }
-        }
-      }
-    }
-  });
-
-  // Gráfico de Tempo (Barra)
-  const hoje = new Date();
-  const diasRestantes = Math.ceil((DATA_CASAMENTO - hoje) / (1000 * 60 * 60 * 24));
-  const diasPassados = Math.ceil((hoje - new Date(2025, 0, 1)) / (1000 * 60 * 60 * 24));
-  
-  const ctxTempo = document.getElementById('graficoTempo').getContext('2d');
-  if (graficoTempoChart) {
-    graficoTempoChart.destroy();
-  }
-  graficoTempoChart = new Chart(ctxTempo, {
-    type: 'bar',
-    data: {
-      labels: ['Dias'],
-      datasets: [
-        {
-          label: 'Passados',
-          data: [diasPassados],
-          backgroundColor: '#4CAF50'
-        },
-        {
-          label: 'Restantes',
-          data: [diasRestantes],
-          backgroundColor: '#ff4d6d'
-        }
-      ]
-    },
-    options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: true,
-      scales: {
-        x: {
-          stacked: true,
-          ticks: { font: { size: 10 } }
-        }
-      },
       plugins: {
         legend: {
           position: 'bottom',
