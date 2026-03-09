@@ -262,7 +262,7 @@ Essa ação não pode ser desfeita.</p>
 // CONFIGURAÇÃO
 // ============================================
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz9oqG6EMwOfL407UK6bcWB2LkFLB5lDQe1kxpRfERhYdYdVkw5v-fGm39sXQwBWMS2EQ/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjhnzRM09Ec-6JU7wmCF-LkQhlcKGu9w8HkhobQNTQ_ioJGiE9fXdgQH8-1qjb2Elqkw/exec";
 
 let itens = [];
 let itemSelecionado = null;
@@ -295,9 +295,11 @@ function carregarItens() {
 }
 
 function carregarItensDaPlanilha() {
-  const url = SCRIPT_URL + "?acao=getItens";
+  const urlItens = SCRIPT_URL + "?acao=getItens";
+  const urlPagamentos = SCRIPT_URL + "?acao=getPagamentos";
   
-  fetch(url)
+  // Carregar itens
+  fetch(urlItens)
     .then(response => response.json())
     .then(data => {
       if (data.sucesso && data.itens) {
@@ -310,9 +312,33 @@ function carregarItensDaPlanilha() {
           pagamentos: []
         }));
         
-        salvarItens();
-        render();
+        // Carregar pagamentos e associar aos itens
+        return fetch(urlPagamentos);
       }
+      return Promise.reject("Erro ao carregar itens");
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.sucesso && data.pagamentos) {
+        // Associar pagamentos aos itens
+        data.pagamentos.forEach(pag => {
+          const item = itens.find(i => i.id === pag.itemId);
+          if (item) {
+            if (!item.pagamentos) {
+              item.pagamentos = [];
+            }
+            item.pagamentos.push({
+              valor: parseFloat(pag.valor),
+              data: pag.data
+            });
+            // Atualizar valorPago
+            item.valorPago = item.pagamentos.reduce((s, p) => s + p.valor, 0);
+          }
+        });
+      }
+      
+      salvarItens();
+      render();
     })
     .catch(error => {
       console.log("Offline ou erro ao carregar:", error);
