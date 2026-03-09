@@ -274,15 +274,17 @@ let itemParaDeletar = null;
 
 document.addEventListener('DOMContentLoaded', function() {
   carregarItens();
-  setInterval(carregarItensDaPlanilha, 10000);
+  setInterval(carregarItensDaPlanilha, 5000);
 });
 
 // ============================================
-// CARREGAR ITENS
+// CARREGAR ITENS - PLANILHA COMO FONTE DE VERDADE
 // ============================================
 
 function carregarItens() {
   carregarItensDaPlanilha();
+  
+  // Fallback: se offline, usa localStorage
   setTimeout(() => {
     if (itens.length === 0) {
       const itensArmazenados = localStorage.getItem("casamento_itens");
@@ -302,20 +304,25 @@ function carregarItensDaPlanilha() {
   fetch(urlItens)
     .then(response => response.json())
     .then(data => {
-      if (data.sucesso && data.itens) {
-        itens = data.itens.map(item => ({
-          id: item.id,
-          descricao: item.descricao,
-          valor: parseFloat(item.valor),
-          valorTotal: parseFloat(item.valor),
-          valorPago: parseFloat(item.valorPago) || 0,
-          pagamentos: []
-        }));
-        
-        // Carregar pagamentos e associar aos itens
-        return fetch(urlPagamentos);
+      if (!data.sucesso || !data.itens) {
+        throw new Error("Erro ao carregar itens");
       }
-      return Promise.reject("Erro ao carregar itens");
+      
+      // IMPORTANTE: ZERA os itens antes de recarregar
+      itens = [];
+      
+      // Cria nova lista de itens
+      itens = data.itens.map(item => ({
+        id: item.id,
+        descricao: item.descricao,
+        valor: parseFloat(item.valor),
+        valorTotal: parseFloat(item.valor),
+        valorPago: parseFloat(item.valorPago) || 0,
+        pagamentos: []
+      }));
+      
+      // Carregar pagamentos
+      return fetch(urlPagamentos);
     })
     .then(response => response.json())
     .then(data => {
@@ -331,26 +338,21 @@ function carregarItensDaPlanilha() {
               valor: parseFloat(pag.valor),
               data: pag.data
             });
-            // Atualizar valorPago
+            // Recalcular valorPago
             item.valorPago = item.pagamentos.reduce((s, p) => s + p.valor, 0);
           }
         });
       }
       
-      salvarItens();
+      // Salvar no localStorage como backup
+      localStorage.setItem("casamento_itens", JSON.stringify(itens));
+      
+      // Renderizar
       render();
     })
     .catch(error => {
-      console.log("Offline ou erro ao carregar:", error);
+      console.log("Erro ao carregar da planilha:", error);
     });
-}
-
-// ============================================
-// SALVAR ITENS
-// ============================================
-
-function salvarItens() {
-  localStorage.setItem("casamento_itens", JSON.stringify(itens));
 }
 
 // ============================================
@@ -409,16 +411,16 @@ function addItem() {
     pagamentos: []
   };
 
-  itens.push(novoItem);
-  salvarItens();
+  // Enviar para Google Sheets PRIMEIRO
   enviarParaSheets(novoItem, "item");
+  
   mostrarAlerta('✅ Compromisso adicionado!', 'sucesso');
   document.getElementById("descricao").value = "";
   document.getElementById("valorTotal").value = "";
 
   setTimeout(() => {
     btnAdicionar.disabled = false;
-    render();
+    // Recarrega da planilha para pegar o item que foi salvo
     carregarItensDaPlanilha();
   }, 1500);
 }
@@ -481,19 +483,6 @@ function registrarPagamento() {
 
   const hoje = new Date().toLocaleDateString('pt-BR');
 
-  if (!item.pagamentos) {
-    item.pagamentos = [];
-  }
-
-  item.pagamentos.push({
-    valor: valor,
-    data: hoje
-  });
-
-  item.valorPago = totalPagoItem(item);
-
-  salvarItens();
-
   const pagamento = {
     id: Date.now().toString(),
     descricao: item.descricao,
@@ -502,6 +491,8 @@ function registrarPagamento() {
     itemId: item.id,
     data: hoje
   };
+  
+  // Enviar para Google Sheets PRIMEIRO
   enviarParaSheets(pagamento, "pagamento");
 
   mostrarAlerta('✅ Pagamento registrado!', 'sucesso');
@@ -510,8 +501,7 @@ function registrarPagamento() {
 
   setTimeout(() => {
     btnRegistrar.disabled = false;
-    render();
-    abrirDetalhes(itemSelecionado);
+    // Recarrega da planilha para sincronizar
     carregarItensDaPlanilha();
   }, 1500);
 }
@@ -538,15 +528,13 @@ function confirmarDelecao() {
   btnConfirmar.disabled = true;
   btnConfirmar.innerText = "Deletando...";
   
+  // Enviar para Google Sheets PRIMEIRO
   deletarDaPlanilha(item.id);
-  
-  itens.splice(itemParaDeletar, 1);
-  salvarItens();
   
   document.getElementById("confirmModal").style.display = "none";
   
   setTimeout(() => {
-    render();
+    // Recarrega da planilha após deletar
     carregarItensDaPlanilha();
     btnConfirmar.disabled = false;
     btnConfirmar.innerText = "Deletar";
