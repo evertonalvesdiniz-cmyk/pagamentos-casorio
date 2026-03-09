@@ -109,8 +109,12 @@ button:disabled{
 }
 .total{
   text-align:center;
-  font-size:20px;
+  font-size:16px;
   font-weight:bold;
+  margin:10px 0;
+}
+.total-faltando{
+  color:#ff4d6d;
 }
 .grafico-card{
   background:white;
@@ -127,6 +131,59 @@ button:disabled{
 }
 .grafico-card canvas{
   max-width:100%;
+}
+.tarefas-card{
+  background:white;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.05);
+  margin-bottom:20px;
+}
+.tarefas-card h3{
+  margin:0 0 15px 0;
+  font-size:16px;
+  color:#333;
+}
+.tarefa-item{
+  display:flex;
+  align-items:center;
+  padding:12px;
+  background:#f9f9f9;
+  border-radius:8px;
+  margin-bottom:8px;
+  transition: all 0.3s ease;
+  cursor:pointer;
+}
+.tarefa-item:hover{
+  background:#f0f0f0;
+}
+.tarefa-item.feita{
+  background:#e8f7ee;
+  opacity:0.7;
+}
+.tarefa-item.feita .tarefa-texto{
+  text-decoration:line-through;
+  color:#999;
+}
+.tarefa-checkbox{
+  width:24px;
+  height:24px;
+  margin-right:12px;
+  cursor:pointer;
+  accent-color:#4CAF50;
+}
+.tarefa-texto{
+  flex:1;
+  font-size:14px;
+}
+.tarefa-responsavel{
+  font-size:12px;
+  color:#999;
+  font-weight:bold;
+  margin-left:auto;
+  background:#ddd;
+  padding:4px 8px;
+  border-radius:4px;
 }
 .modal{
   position:fixed;
@@ -234,13 +291,6 @@ button:disabled{
 .btnCancelar:hover{
   background:#5a6268;
 }
-@keyframes pulse {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-}
-.item.celebrando {
-  animation: pulse 0.5s ease;
-}
 </style>
 </head>
 <body>
@@ -267,6 +317,9 @@ Total planejado: R$ <span id="totalPlanejado">0</span>
 <div class="total">
 Total pago: R$ <span id="totalPago">0</span>
 </div>
+<div class="total total-faltando">
+Total faltando: R$ <span id="totalFaltando">0</span>
+</div>
 <div class="progresso">
 <div id="barraGeral" class="progressoBar" style="width:0%"></div>
 </div>
@@ -278,6 +331,11 @@ Total pago: R$ <span id="totalPago">0</span>
 </div>
 
 <div id="lista"></div>
+
+<div class="tarefas-card">
+  <h3>📋 Tarefas do Casamento</h3>
+  <div id="tarefasLista"></div>
+</div>
 
 </div>
 
@@ -317,8 +375,53 @@ let itemParaDeletar = null;
 let graficoOrcamentoChart = null;
 let ultimoTotalPago = 0;
 
+// TAREFAS
+const tarefasData = [
+  { texto: "Responder questionário cerimônia", responsavel: "Juntos" },
+  { texto: "Cartório", responsavel: "Everton" },
+  { texto: "Live", responsavel: "Everton" },
+  { texto: "Cortar madeiras", responsavel: "Everton" },
+  { texto: "Porta doce madeira", responsavel: "Iara" },
+  { texto: "Soupla - Juta", responsavel: "Iara" },
+  { texto: "Quadro banheiro", responsavel: "Iara" },
+  { texto: "Show pirotécnico", responsavel: "Everton" },
+  { texto: "Bolo fake", responsavel: "Iara" },
+  { texto: "Pétalas", responsavel: "Iara" },
+  { texto: "Tecido da mesa - meio", responsavel: "Iara" },
+  { texto: "Revelar nossas fotos", responsavel: "Iara" },
+  { texto: "Fotos kids", responsavel: "Juntos" },
+  { texto: "Comprar verniz", responsavel: "Juntos" },
+  { texto: "Espelho + adesivo", responsavel: "Iara" },
+  { texto: "Vestido Sofia", responsavel: "Juntos" },
+  { texto: "Roupa Arthur", responsavel: "Juntos" },
+  { texto: "Roupa Neymar", responsavel: "Iara" },
+  { texto: "Perfume novios", responsavel: "Juntos" },
+  { texto: "Roupa noivo", responsavel: "Juntos" },
+  { texto: "Confirmar roupa pais - Denise", responsavel: "Juntos" },
+  { texto: "Alinhar make meninas", responsavel: "Iara" },
+  { texto: "Kit banheiro", responsavel: "Juntos" },
+  { texto: "Marshmellow", responsavel: "Juntos" },
+  { texto: "Almoço dia 29", responsavel: "Financeiro" },
+  { texto: "Champagne", responsavel: "Juntos" },
+  { texto: "Taça", responsavel: "Juntos" },
+  { texto: "Lençol lágrimas", responsavel: "Juntos" },
+  { texto: "Valsa", responsavel: "Juntos" },
+  { texto: "Recado nas lembrancinhas", responsavel: "Iara" },
+  { texto: "Xícara lembrancinhas", responsavel: "Iara" },
+  { texto: "Café lembrancinhas", responsavel: "Everton" },
+  { texto: "Lembraninha kids", responsavel: "Iara" },
+  { texto: "Núpcias", responsavel: "Iara" },
+  { texto: "Marcar barbeiro", responsavel: "Everton" },
+  { texto: "Cupcake", responsavel: "Financeiro" },
+  { texto: "Novinhos - Topo bolo", responsavel: "Financeiro" }
+];
+
+let tarefasFeitas = [];
+
 document.addEventListener('DOMContentLoaded', function() {
   localStorage.clear();
+  carregarTarefas();
+  renderTarefas();
   carregarTudo();
   setInterval(carregarTudo, 2000);
 });
@@ -333,6 +436,52 @@ function triggerConfete() {
     spread: 70,
     origin: { y: 0.6 },
     colors: ['#ff4d6d', '#ffd700', '#ff1493', '#ff69b4', '#ff6347']
+  });
+}
+
+// ============================================
+// GERENCIAR TAREFAS
+// ============================================
+
+function carregarTarefas() {
+  const tarefasArmazenadas = localStorage.getItem("tarefas_feitas");
+  if (tarefasArmazenadas) {
+    tarefasFeitas = JSON.parse(tarefasArmazenadas);
+  }
+}
+
+function salvarTarefas() {
+  localStorage.setItem("tarefas_feitas", JSON.stringify(tarefasFeitas));
+}
+
+function toggleTarefa(index) {
+  const texto = tarefasData[index].texto;
+  const posicao = tarefasFeitas.indexOf(texto);
+  
+  if (posicao > -1) {
+    tarefasFeitas.splice(posicao, 1);
+  } else {
+    tarefasFeitas.push(texto);
+  }
+  
+  salvarTarefas();
+  renderTarefas();
+}
+
+function renderTarefas() {
+  const tarefasLista = document.getElementById("tarefasLista");
+  tarefasLista.innerHTML = "";
+  
+  tarefasData.forEach((tarefa, index) => {
+    const feita = tarefasFeitas.includes(tarefa.texto);
+    const tarefaHTML = `
+      <div class="tarefa-item ${feita ? 'feita' : ''}" onclick="toggleTarefa(${index})">
+        <input type="checkbox" class="tarefa-checkbox" ${feita ? 'checked' : ''} onclick="event.stopPropagation()">
+        <div class="tarefa-texto">${tarefa.texto}</div>
+        <div class="tarefa-responsavel">${tarefa.responsavel}</div>
+      </div>
+    `;
+    tarefasLista.innerHTML += tarefaHTML;
   });
 }
 
@@ -376,13 +525,11 @@ function carregarTudo() {
     
     render();
     
-    // Calcular total pago
     let totalPago = 0;
     itens.forEach(item => {
       totalPago += item.valorPago;
     });
     
-    // Atualizar gráfico APENAS se o total mudou
     if (totalPago !== ultimoTotalPago) {
       ultimoTotalPago = totalPago;
       atualizarGrafico();
@@ -517,7 +664,6 @@ function registrarPagamento() {
 
   mostrarAlerta('✅ Pagamento registrado!', 'sucesso');
   
-  // CONFETE!
   triggerConfete();
   
   document.getElementById("valorPagamento").value = "";
@@ -604,7 +750,7 @@ function mostrarAlerta(msg, tipo) {
 }
 
 // ============================================
-// ATUALIZAR GRÁFICO (APENAS QUANDO MUDA)
+// ATUALIZAR GRÁFICO
 // ============================================
 
 function atualizarGrafico() {
@@ -616,7 +762,6 @@ function atualizarGrafico() {
     totalPago += item.valorPago;
   });
 
-  // Gráfico de Orçamento (Pizza)
   const ctxOrcamento = document.getElementById('graficoOrcamento').getContext('2d');
   if (graficoOrcamentoChart) {
     graficoOrcamentoChart.destroy();
@@ -656,6 +801,7 @@ function render() {
     lista.innerHTML = `<div class="empty-state"><div>🎁</div><p>Nenhum compromisso ainda. Adicione o primeiro!</p></div>`;
     document.getElementById("totalPlanejado").innerText = "0";
     document.getElementById("totalPago").innerText = "0";
+    document.getElementById("totalFaltando").innerText = "0";
     document.getElementById("barraGeral").style.width = "0%";
     return;
   }
@@ -694,6 +840,7 @@ function render() {
 
   document.getElementById("totalPlanejado").innerText = totalPlanejado.toFixed(2).replace('.', ',');
   document.getElementById("totalPago").innerText = totalPago.toFixed(2).replace('.', ',');
+  document.getElementById("totalFaltando").innerText = (totalPlanejado - totalPago).toFixed(2).replace('.', ',');
 
   let progressoTotal = (totalPago / totalPlanejado) * 100;
   document.getElementById("barraGeral").style.width = progressoTotal + "%";
