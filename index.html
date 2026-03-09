@@ -110,6 +110,8 @@ button:disabled{
   border-radius:12px;
   width:90%;
   max-width:420px;
+  max-height:80vh;
+  overflow-y:auto;
 }
 .pagoItem{
   background:#e8f7ee;
@@ -261,16 +263,13 @@ Essa ação não pode ser desfeita.</p>
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjhnzRM09Ec-6JU7wmCF-LkQhlcKGu9w8HkhobQNTQ_ioJGiE9fXdgQH8-1qjb2Elqkw/exec";
 
 let itens = [];
+let pagamentosGlobais = [];
 let itemSelecionado = null;
 let itemParaDeletar = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-  // Limpar localStorage completamente
   localStorage.clear();
-  
   carregarTudo();
-  
-  // Sincronizar a cada 3 segundos
   setInterval(carregarTudo, 3000);
 });
 
@@ -300,28 +299,21 @@ function carregarTudo() {
       descricao: item.descricao,
       valor: parseFloat(item.valor),
       valorTotal: parseFloat(item.valor),
-      valorPago: parseFloat(item.valorPago) || 0,
-      pagamentos: []
+      valorPago: parseFloat(item.valorPago) || 0
     }));
     
-    // Associar pagamentos
+    // Guardar pagamentos globalmente
+    pagamentosGlobais = [];
     if (dataPagamentos.sucesso && dataPagamentos.pagamentos) {
-      dataPagamentos.pagamentos.forEach(pag => {
-        const item = itens.find(i => i.id === pag.itemId);
-        if (item) {
-          if (!item.pagamentos) {
-            item.pagamentos = [];
-          }
-          item.pagamentos.push({
-            valor: parseFloat(pag.valor),
-            data: pag.data
-          });
-          item.valorPago = item.pagamentos.reduce((s, p) => s + p.valor, 0);
-        }
-      });
+      pagamentosGlobais = dataPagamentos.pagamentos.map(pag => ({
+        id: pag.id,
+        itemId: pag.itemId,
+        data: pag.data,
+        valor: parseFloat(pag.valor),
+        descricao: pag.descricao
+      }));
     }
     
-    // Renderizar
     render();
   })
   .catch(error => {
@@ -394,14 +386,6 @@ function addItem() {
 }
 
 // ============================================
-// TOTAL PAGO
-// ============================================
-
-function totalPagoItem(item) {
-  return item.pagamentos ? item.pagamentos.reduce((s, p) => s + p.valor, 0) : item.valorPago || 0;
-}
-
-// ============================================
 // ABRIR MODAL
 // ============================================
 
@@ -415,8 +399,11 @@ function abrirDetalhes(i) {
   let historico = document.getElementById("historico");
   historico.innerHTML = "";
 
-  if (item.pagamentos && item.pagamentos.length > 0) {
-    item.pagamentos.forEach(p => {
+  // Filtrar pagamentos deste item
+  const pagamentosItem = pagamentosGlobais.filter(p => p.itemId === item.id);
+
+  if (pagamentosItem && pagamentosItem.length > 0) {
+    pagamentosItem.forEach(p => {
       historico.innerHTML += `<div class="pagoItem">R$ ${p.valor.toFixed(2).replace('.', ',')} — ${p.data}</div>`;
     });
   } else {
@@ -464,6 +451,10 @@ function registrarPagamento() {
   setTimeout(() => {
     btnRegistrar.disabled = false;
     carregarTudo();
+    // Reabrir o modal com dados atualizados
+    setTimeout(() => {
+      abrirDetalhes(itemSelecionado);
+    }, 500);
   }, 1500);
 }
 
@@ -561,7 +552,7 @@ function render() {
   let totalPago = 0;
 
   itens.forEach((item, i) => {
-    let pago = totalPagoItem(item);
+    let pago = item.valorPago;
     let progresso = (pago / item.valor) * 100;
 
     totalPlanejado += item.valor;
