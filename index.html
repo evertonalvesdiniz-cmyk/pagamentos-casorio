@@ -1,271 +1,640 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-
 <meta charset="UTF-8">
-<title>Pagamentos</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💍 Pagamentos do Casamento</title>
 <style>
-
 body{
-font-family:Arial;
-background:#f4f4f4;
-padding:30px;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI";
+  background:#f5f5f5;
+  margin:0;
 }
-
 .container{
-max-width:900px;
-margin:auto;
-background:white;
-padding:20px;
-border-radius:10px;
+  max-width:520px;
+  margin:auto;
+  padding:20px;
 }
-
-.item{
-border:1px solid #ddd;
-padding:15px;
-margin-bottom:15px;
-border-radius:8px;
+h1{
+  text-align:center;
 }
-
-.progress{
-height:20px;
-background:#eee;
-border-radius:10px;
-overflow:hidden;
+.frase{
+  text-align:center;
+  color:#666;
+  margin-bottom:20px;
 }
-
-.progress-bar{
-height:20px;
-background:#4caf50;
-width:0%;
+.card{
+  background:white;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.05);
+  margin-bottom:20px;
 }
-
+input{
+  width:100%;
+  padding:12px;
+  margin-bottom:10px;
+  border-radius:8px;
+  border:1px solid #ddd;
+  font-size:16px;
+  box-sizing:border-box;
+}
 button{
-padding:8px 12px;
-margin-top:10px;
-cursor:pointer;
+  padding:12px;
+  border:none;
+  border-radius:8px;
+  background:#ff4d6d;
+  color:white;
+  font-weight:bold;
+  width:100%;
+  cursor:pointer;
 }
-
+button:hover{
+  background:#e63d63;
+}
+button:disabled{
+  background:#ccc;
+  cursor:not-allowed;
+}
+.item{
+  background:white;
+  padding:15px;
+  border-radius:10px;
+  margin-bottom:12px;
+}
+.topItem{
+  display:flex;
+  justify-content:space-between;
+}
+.progresso{
+  height:8px;
+  background:#ddd;
+  border-radius:5px;
+  margin-top:8px;
+  overflow:hidden;
+}
+.progressoBar{
+  height:8px;
+  background:#4CAF50;
+}
+.botoes{
+  display:flex;
+  gap:10px;
+  margin-top:10px;
+}
+.botoes button{
+  flex:1;
+  font-size:14px;
+  padding:8px;
+}
+.total{
+  text-align:center;
+  font-size:20px;
+  font-weight:bold;
+}
 .modal{
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:rgba(0,0,0,0.5);
-display:none;
-align-items:center;
-justify-content:center;
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;
+  background:rgba(0,0,0,0.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
 }
-
-.modal-content{
-background:white;
-padding:20px;
-width:400px;
-border-radius:8px;
+.modalContent{
+  background:white;
+  padding:20px;
+  border-radius:12px;
+  width:90%;
+  max-width:420px;
 }
-
+.pagoItem{
+  background:#e8f7ee;
+  padding:8px;
+  border-radius:6px;
+  margin-top:6px;
+  font-size:14px;
+}
+.alerta{
+  padding:12px;
+  border-radius:8px;
+  margin-bottom:15px;
+}
+.alerta.sucesso{
+  background:#d4edda;
+  color:#155724;
+  border-left:4px solid #28a745;
+}
+.alerta.erro{
+  background:#f8d7da;
+  color:#721c24;
+  border-left:4px solid #dc3545;
+}
+.empty-state{
+  text-align:center;
+  color:#999;
+  padding:40px 20px;
+}
+#uploadFrame{
+  display:none;
+}
+.confirmModal{
+  position:fixed;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;
+  background:rgba(0,0,0,0.6);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:2000;
+}
+.confirmContent{
+  background:white;
+  padding:30px;
+  border-radius:12px;
+  width:90%;
+  max-width:400px;
+  text-align:center;
+}
+.confirmContent h3{
+  margin-top:0;
+  color:#333;
+}
+.confirmContent p{
+  color:#666;
+  margin-bottom:20px;
+}
+.confirmBotoes{
+  display:flex;
+  gap:12px;
+  justify-content:center;
+}
+.confirmBotoes button{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:8px;
+  font-weight:bold;
+  cursor:pointer;
+}
+.btnConfirmar{
+  background:#dc3545;
+  color:white;
+}
+.btnConfirmar:hover{
+  background:#c82333;
+}
+.btnCancelar{
+  background:#6c757d;
+  color:white;
+}
+.btnCancelar:hover{
+  background:#5a6268;
+}
 </style>
-
 </head>
-
 <body>
 
 <div class="container">
 
-<h2>Itens</h2>
+<h1>💍 Nosso Casamento</h1>
 
-<input id="descricao" placeholder="Descrição">
-<input id="valor" type="number" placeholder="Valor">
-<button onclick="addItem()">Adicionar</button>
+<div class="frase">
+"Cada pagamento é um passo para o grande dia ❤️"
+</div>
 
-<h3>Total Geral: R$ <span id="total">0</span></h3>
+<div class="card">
+<div id="alerta"></div>
+<input id="descricao" placeholder="Ex: Fotógrafo">
+<input id="valorTotal" type="number" placeholder="Valor total (R$)">
+<button id="btnAdicionar" onclick="addItem()">Adicionar compromisso ✨</button>
+</div>
+
+<div class="card">
+<div class="total">
+Total planejado: R$ <span id="totalPlanejado">0</span>
+</div>
+<div class="total">
+Total pago: R$ <span id="totalPago">0</span>
+</div>
+<div class="progresso">
+<div id="barraGeral" class="progressoBar" style="width:0%"></div>
+</div>
+</div>
 
 <div id="lista"></div>
 
 </div>
 
-
-<div class="modal" id="modal">
-
-<div class="modal-content">
-
+<div id="modal" class="modal">
+<div class="modalContent">
 <h3 id="tituloItem"></h3>
-
-<input id="valorPagamento" type="number" placeholder="Valor pagamento">
-
-<button onclick="addPagamento()">Salvar pagamento</button>
-
+<input id="valorPagamento" type="number" placeholder="Valor pago">
+<button id="btnRegistrar" onclick="registrarPagamento()">Registrar pagamento 🎉</button>
 <h4>Histórico</h4>
-
 <div id="historico"></div>
-
-<button onclick="fechar()">Fechar</button>
-
+<button onclick="fecharModal()">Fechar</button>
+</div>
 </div>
 
+<div id="confirmModal" class="confirmModal">
+<div class="confirmContent">
+<h3>⚠️ Confirmar Exclusão</h3>
+<p>Tem certeza que deseja remover este item?<br>
+Essa ação não pode ser desfeita.</p>
+<div class="confirmBotoes">
+<button class="btnCancelar" onclick="cancelarDelecao()">Cancelar</button>
+<button class="btnConfirmar" onclick="confirmarDelecao()">Deletar</button>
+</div>
+</div>
 </div>
 
+<iframe name="uploadFrame" id="uploadFrame"></iframe>
 
 <script>
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwlDxLrSofdPMRxsmZe8nUYwgFp9ZcO2TxuatZ94DC8BH9iO3fNFUBKNQ1chlPCsd0r4g/exec";
+// ============================================
+// CONFIGURAÇÃO
+// ============================================
 
-let itens = JSON.parse(localStorage.getItem("itens")||"[]");
-let pagamentos = JSON.parse(localStorage.getItem("pagamentos")||"[]");
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz9oqG6EMwOfL407UK6bcWB2LkFLB5lDQe1kxpRfERhYdYdVkw5v-fGm39sXQwBWMS2EQ/exec";
 
-let itemAtual = null;
+let itens = [];
+let itemSelecionado = null;
+let itemParaDeletar = null;
 
-render();
+// ============================================
+// INICIALIZAÇÃO
+// ============================================
 
-function addItem(){
-
-const descricao=document.getElementById("descricao").value;
-const valor=Number(document.getElementById("valor").value);
-
-const id=Date.now().toString();
-
-const data=new Date().toISOString();
-
-const item={
-id,
-descricao,
-valor
-};
-
-itens.push(item);
-
-localStorage.setItem("itens",JSON.stringify(itens));
-
-fetch(SCRIPT_URL,{
-method:"POST",
-body:new URLSearchParams({
-tipo:"item",
-itemId:id,
-descricao,
-valor,
-data
-})
+document.addEventListener('DOMContentLoaded', function() {
+  carregarItens();
+  setInterval(carregarItensDaPlanilha, 10000);
 });
 
-render();
+// ============================================
+// CARREGAR ITENS
+// ============================================
 
+function carregarItens() {
+  carregarItensDaPlanilha();
+  setTimeout(() => {
+    if (itens.length === 0) {
+      const itensArmazenados = localStorage.getItem("casamento_itens");
+      if (itensArmazenados) {
+        itens = JSON.parse(itensArmazenados);
+        render();
+      }
+    }
+  }, 2000);
 }
 
-function addPagamento(){
+function carregarItensDaPlanilha() {
+  const url = SCRIPT_URL + "?acao=getItens";
+  
+  fetch(url)
+    .then(response => response.json())
+    .then(data => {
+      if (data.sucesso && data.itens) {
+        itens = data.itens.map(item => ({
+          id: item.id,
+          descricao: item.descricao,
+          valor: parseFloat(item.valor),
+          valorTotal: parseFloat(item.valor),
+          valorPago: parseFloat(item.valorPago) || 0,
+          pagamentos: []
+        }));
+        
+        salvarItens();
+        render();
+      }
+    })
+    .catch(error => {
+      console.log("Offline ou erro ao carregar:", error);
+    });
+}
 
-const valor=Number(document.getElementById("valorPagamento").value);
+// ============================================
+// SALVAR ITENS
+// ============================================
 
-const data=new Date().toISOString();
+function salvarItens() {
+  localStorage.setItem("casamento_itens", JSON.stringify(itens));
+}
 
-const pagamento={
-id:Date.now().toString(),
-itemId:itemAtual,
-valor,
-data
-};
+// ============================================
+// ENVIAR PARA SHEETS
+// ============================================
 
-pagamentos.push(pagamento);
+function enviarParaSheets(item, tipo = "item") {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = SCRIPT_URL;
+  form.target = "uploadFrame";
 
-localStorage.setItem("pagamentos",JSON.stringify(pagamentos));
+  const dados = {
+    tipo: tipo,
+    descricao: item.descricao,
+    valor: item.valor || item.valorPago,
+    itemId: item.id || "",
+    data: new Date().toLocaleDateString('pt-BR')
+  };
 
-fetch(SCRIPT_URL,{
-method:"POST",
-body:new URLSearchParams({
-tipo:"pagamento",
-itemId:itemAtual,
-valor,
-data
-})
+  for(let key in dados){
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = dados[key];
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+}
+
+// ============================================
+// ADICIONAR ITEM
+// ============================================
+
+function addItem() {
+  const descricao = document.getElementById("descricao").value.trim();
+  const valor = parseFloat(document.getElementById("valorTotal").value);
+
+  if (!descricao || !valor || valor <= 0) {
+    mostrarAlerta('Preencha os campos corretamente', 'erro');
+    return;
+  }
+
+  const btnAdicionar = document.getElementById("btnAdicionar");
+  btnAdicionar.disabled = true;
+
+  const novoItem = {
+    id: Date.now().toString(),
+    descricao: descricao,
+    valor: valor,
+    valorTotal: valor,
+    valorPago: 0,
+    pagamentos: []
+  };
+
+  itens.push(novoItem);
+  salvarItens();
+  enviarParaSheets(novoItem, "item");
+  mostrarAlerta('✅ Compromisso adicionado!', 'sucesso');
+  document.getElementById("descricao").value = "";
+  document.getElementById("valorTotal").value = "";
+
+  setTimeout(() => {
+    btnAdicionar.disabled = false;
+    render();
+    carregarItensDaPlanilha();
+  }, 1500);
+}
+
+// ============================================
+// TOTAL PAGO
+// ============================================
+
+function totalPagoItem(item) {
+  return item.pagamentos ? item.pagamentos.reduce((s, p) => s + p.valor, 0) : item.valorPago || 0;
+}
+
+// ============================================
+// ABRIR MODAL
+// ============================================
+
+function abrirDetalhes(i) {
+  itemSelecionado = i;
+  let item = itens[i];
+
+  document.getElementById("modal").style.display = "flex";
+  document.getElementById("tituloItem").innerText = item.descricao;
+
+  let historico = document.getElementById("historico");
+  historico.innerHTML = "";
+
+  if (item.pagamentos && item.pagamentos.length > 0) {
+    item.pagamentos.forEach(p => {
+      historico.innerHTML += `<div class="pagoItem">R$ ${p.valor.toFixed(2).replace('.', ',')} — ${p.data}</div>`;
+    });
+  } else {
+    historico.innerHTML = '<p style="color:#999;">Nenhum pagamento registrado</p>';
+  }
+}
+
+// ============================================
+// FECHAR MODAL
+// ============================================
+
+function fecharModal() {
+  document.getElementById("modal").style.display = "none";
+  document.getElementById("valorPagamento").value = "";
+}
+
+// ============================================
+// REGISTRAR PAGAMENTO
+// ============================================
+
+function registrarPagamento() {
+  const valor = parseFloat(document.getElementById("valorPagamento").value);
+
+  if (!valor || valor <= 0) {
+    mostrarAlerta('Valor inválido', 'erro');
+    return;
+  }
+
+  const item = itens[itemSelecionado];
+  const btnRegistrar = document.getElementById("btnRegistrar");
+  btnRegistrar.disabled = true;
+
+  const hoje = new Date().toLocaleDateString('pt-BR');
+
+  if (!item.pagamentos) {
+    item.pagamentos = [];
+  }
+
+  item.pagamentos.push({
+    valor: valor,
+    data: hoje
+  });
+
+  item.valorPago = totalPagoItem(item);
+
+  salvarItens();
+
+  const pagamento = {
+    id: Date.now().toString(),
+    descricao: item.descricao,
+    valor: valor,
+    valorPago: valor,
+    itemId: item.id,
+    data: hoje
+  };
+  enviarParaSheets(pagamento, "pagamento");
+
+  mostrarAlerta('✅ Pagamento registrado!', 'sucesso');
+  document.getElementById("valorPagamento").value = "";
+  fecharModal();
+
+  setTimeout(() => {
+    btnRegistrar.disabled = false;
+    render();
+    abrirDetalhes(itemSelecionado);
+    carregarItensDaPlanilha();
+  }, 1500);
+}
+
+// ============================================
+// REMOVER COM CONFIRMAÇÃO
+// ============================================
+
+function remover(i) {
+  itemParaDeletar = i;
+  document.getElementById("confirmModal").style.display = "flex";
+}
+
+function cancelarDelecao() {
+  itemParaDeletar = null;
+  document.getElementById("confirmModal").style.display = "none";
+}
+
+function confirmarDelecao() {
+  if (itemParaDeletar === null) return;
+  
+  const item = itens[itemParaDeletar];
+  const btnConfirmar = document.querySelector(".btnConfirmar");
+  btnConfirmar.disabled = true;
+  btnConfirmar.innerText = "Deletando...";
+  
+  deletarDaPlanilha(item.id);
+  
+  itens.splice(itemParaDeletar, 1);
+  salvarItens();
+  
+  document.getElementById("confirmModal").style.display = "none";
+  
+  setTimeout(() => {
+    render();
+    carregarItensDaPlanilha();
+    btnConfirmar.disabled = false;
+    btnConfirmar.innerText = "Deletar";
+    mostrarAlerta('✅ Item deletado!', 'sucesso');
+  }, 1500);
+  
+  itemParaDeletar = null;
+}
+
+function deletarDaPlanilha(itemId) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = SCRIPT_URL;
+  form.target = "uploadFrame";
+
+  const dados = {
+    tipo: "deletarItem",
+    itemId: itemId
+  };
+
+  for(let key in dados){
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = dados[key];
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+}
+
+// ============================================
+// MOSTRAR ALERTA
+// ============================================
+
+function mostrarAlerta(msg, tipo) {
+  const container = document.getElementById("alerta");
+  container.className = `alerta ${tipo}`;
+  container.innerText = msg;
+
+  setTimeout(() => {
+    container.innerHTML = '';
+  }, 4000);
+}
+
+// ============================================
+// RENDERIZAR
+// ============================================
+
+function render() {
+  let lista = document.getElementById("lista");
+
+  if (itens.length === 0) {
+    lista.innerHTML = `<div class="empty-state"><div>🎁</div><p>Nenhum compromisso ainda. Adicione o primeiro!</p></div>`;
+    document.getElementById("totalPlanejado").innerText = "0";
+    document.getElementById("totalPago").innerText = "0";
+    document.getElementById("barraGeral").style.width = "0%";
+    return;
+  }
+
+  lista.innerHTML = "";
+  let totalPlanejado = 0;
+  let totalPago = 0;
+
+  itens.forEach((item, i) => {
+    let pago = totalPagoItem(item);
+    let progresso = (pago / item.valor) * 100;
+
+    totalPlanejado += item.valor;
+    totalPago += pago;
+
+    lista.innerHTML += `
+      <div class="item">
+        <div class="topItem">
+          <div>
+            <strong>${item.descricao}</strong><br>
+            R$ ${pago.toFixed(2).replace('.', ',')} / R$ ${item.valor.toFixed(2).replace('.', ',')}
+          </div>
+        </div>
+        <div class="progresso">
+          <div class="progressoBar" style="width:${progresso}%"></div>
+        </div>
+        <div class="botoes">
+          <button onclick="abrirDetalhes(${i})">Ver mais</button>
+          <button onclick="remover(${i})">Excluir</button>
+        </div>
+      </div>
+    `;
+  });
+
+  document.getElementById("totalPlanejado").innerText = totalPlanejado.toFixed(2).replace('.', ',');
+  document.getElementById("totalPago").innerText = totalPago.toFixed(2).replace('.', ',');
+
+  let progressoTotal = (totalPago / totalPlanejado) * 100;
+  document.getElementById("barraGeral").style.width = progressoTotal + "%";
+}
+
+// Fechar modal ao clicar fora
+document.addEventListener('click', function(event) {
+  const modal = document.getElementById('modal');
+  const confirmModal = document.getElementById('confirmModal');
+  
+  if (event.target === modal) {
+    fecharModal();
+  }
+  
+  if (event.target === confirmModal) {
+    cancelarDelecao();
+  }
 });
-
-render();
-
-abrir(itemAtual);
-
-}
-
-function render(){
-
-const lista=document.getElementById("lista");
-lista.innerHTML="";
-
-let total=0;
-
-itens.forEach(item=>{
-
-const pagos=pagamentos
-.filter(p=>p.itemId==item.id)
-.reduce((s,p)=>s+p.valor,0);
-
-total+=item.valor;
-
-const perc=(pagos/item.valor)*100;
-
-const div=document.createElement("div");
-div.className="item";
-
-div.innerHTML=`
-
-<h3>${item.descricao}</h3>
-
-<p>Total: R$ ${item.valor}</p>
-
-<p>Pago: R$ ${pagos}</p>
-
-<div class="progress">
-<div class="progress-bar" style="width:${perc}%"></div>
-</div>
-
-<button onclick="abrir('${item.id}')">Ver Mais</button>
-
-`;
-
-lista.appendChild(div);
-
-});
-
-document.getElementById("total").innerText=total;
-
-}
-
-function abrir(id){
-
-itemAtual=id;
-
-document.getElementById("modal").style.display="flex";
-
-const item=itens.find(i=>i.id==id);
-
-document.getElementById("tituloItem").innerText=item.descricao;
-
-const hist=document.getElementById("historico");
-
-hist.innerHTML="";
-
-pagamentos
-.filter(p=>p.itemId==id)
-.forEach(p=>{
-
-const d=document.createElement("div");
-
-d.innerText=`${p.data} - R$ ${p.valor}`;
-
-hist.appendChild(d);
-
-});
-
-}
-
-function fechar(){
-
-document.getElementById("modal").style.display="none";
-
-}
 
 </script>
 
 </body>
 </html>
-
