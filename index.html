@@ -258,126 +258,100 @@ Essa ação não pode ser desfeita.</p>
 
 <script>
 
-// ============================================
-// CONFIGURAÇÃO
-// ============================================
-
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjhnzRM09Ec-6JU7wmCF-LkQhlcKGu9w8HkhobQNTQ_ioJGiE9fXdgQH8-1qjb2Elqkw/exec";
 
 let itens = [];
 let itemSelecionado = null;
 let itemParaDeletar = null;
 
-// ============================================
-// INICIALIZAÇÃO
-// ============================================
-
 document.addEventListener('DOMContentLoaded', function() {
-  carregarItens();
-  setInterval(carregarItensDaPlanilha, 5000);
+  // Limpar localStorage completamente
+  localStorage.clear();
+  
+  carregarTudo();
+  
+  // Sincronizar a cada 3 segundos
+  setInterval(carregarTudo, 3000);
 });
 
 // ============================================
-// CARREGAR ITENS - PLANILHA COMO FONTE DE VERDADE
+// CARREGAR TUDO DA PLANILHA
 // ============================================
 
-function carregarItens() {
-  carregarItensDaPlanilha();
-  
-  // Fallback: se offline, usa localStorage
-  setTimeout(() => {
-    if (itens.length === 0) {
-      const itensArmazenados = localStorage.getItem("casamento_itens");
-      if (itensArmazenados) {
-        itens = JSON.parse(itensArmazenados);
-        render();
-      }
-    }
-  }, 2000);
-}
-
-function carregarItensDaPlanilha() {
+function carregarTudo() {
   const urlItens = SCRIPT_URL + "?acao=getItens";
   const urlPagamentos = SCRIPT_URL + "?acao=getPagamentos";
   
-  // Carregar itens
-  fetch(urlItens)
-    .then(response => response.json())
-    .then(data => {
-      if (!data.sucesso || !data.itens) {
-        throw new Error("Erro ao carregar itens");
-      }
-      
-      // IMPORTANTE: ZERA os itens antes de recarregar
-      itens = [];
-      
-      // Cria nova lista de itens
-      itens = data.itens.map(item => ({
-        id: item.id,
-        descricao: item.descricao,
-        valor: parseFloat(item.valor),
-        valorTotal: parseFloat(item.valor),
-        valorPago: parseFloat(item.valorPago) || 0,
-        pagamentos: []
-      }));
-      
-      // Carregar pagamentos
-      return fetch(urlPagamentos);
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.sucesso && data.pagamentos) {
-        // Associar pagamentos aos itens
-        data.pagamentos.forEach(pag => {
-          const item = itens.find(i => i.id === pag.itemId);
-          if (item) {
-            if (!item.pagamentos) {
-              item.pagamentos = [];
-            }
-            item.pagamentos.push({
-              valor: parseFloat(pag.valor),
-              data: pag.data
-            });
-            // Recalcular valorPago
-            item.valorPago = item.pagamentos.reduce((s, p) => s + p.valor, 0);
+  Promise.all([
+    fetch(urlItens).then(r => r.json()),
+    fetch(urlPagamentos).then(r => r.json())
+  ])
+  .then(([dataItens, dataPagamentos]) => {
+    
+    if (!dataItens.sucesso || !dataItens.itens) {
+      console.error("Erro ao carregar itens");
+      return;
+    }
+    
+    // Limpar e recarregar itens
+    itens = [];
+    itens = dataItens.itens.map(item => ({
+      id: item.id,
+      descricao: item.descricao,
+      valor: parseFloat(item.valor),
+      valorTotal: parseFloat(item.valor),
+      valorPago: parseFloat(item.valorPago) || 0,
+      pagamentos: []
+    }));
+    
+    // Associar pagamentos
+    if (dataPagamentos.sucesso && dataPagamentos.pagamentos) {
+      dataPagamentos.pagamentos.forEach(pag => {
+        const item = itens.find(i => i.id === pag.itemId);
+        if (item) {
+          if (!item.pagamentos) {
+            item.pagamentos = [];
           }
-        });
-      }
-      
-      // Salvar no localStorage como backup
-      localStorage.setItem("casamento_itens", JSON.stringify(itens));
-      
-      // Renderizar
-      render();
-    })
-    .catch(error => {
-      console.log("Erro ao carregar da planilha:", error);
-    });
+          item.pagamentos.push({
+            valor: parseFloat(pag.valor),
+            data: pag.data
+          });
+          item.valorPago = item.pagamentos.reduce((s, p) => s + p.valor, 0);
+        }
+      });
+    }
+    
+    // Renderizar
+    render();
+  })
+  .catch(error => {
+    console.error("Erro ao sincronizar:", error);
+  });
 }
 
 // ============================================
 // ENVIAR PARA SHEETS
 // ============================================
 
-function enviarParaSheets(item, tipo = "item") {
+function enviarParaSheets(dados, tipo = "item") {
   const form = document.createElement("form");
   form.method = "POST";
   form.action = SCRIPT_URL;
   form.target = "uploadFrame";
 
-  const dados = {
+  const dadosCompletos = {
     tipo: tipo,
-    descricao: item.descricao,
-    valor: item.valor || item.valorPago,
-    itemId: item.id || "",
+    descricao: dados.descricao || "",
+    valor: dados.valor || 0,
+    itemId: dados.itemId || "",
     data: new Date().toLocaleDateString('pt-BR')
   };
 
-  for(let key in dados){
+  for(let key in dadosCompletos){
     const input = document.createElement("input");
     input.type = "hidden";
     input.name = key;
-    input.value = dados[key];
+    input.value = dadosCompletos[key];
     form.appendChild(input);
   }
 
@@ -403,25 +377,19 @@ function addItem() {
   btnAdicionar.disabled = true;
 
   const novoItem = {
-    id: Date.now().toString(),
     descricao: descricao,
-    valor: valor,
-    valorTotal: valor,
-    valorPago: 0,
-    pagamentos: []
+    valor: valor
   };
 
-  // Enviar para Google Sheets PRIMEIRO
   enviarParaSheets(novoItem, "item");
-  
+
   mostrarAlerta('✅ Compromisso adicionado!', 'sucesso');
   document.getElementById("descricao").value = "";
   document.getElementById("valorTotal").value = "";
 
   setTimeout(() => {
     btnAdicionar.disabled = false;
-    // Recarrega da planilha para pegar o item que foi salvo
-    carregarItensDaPlanilha();
+    carregarTudo();
   }, 1500);
 }
 
@@ -481,18 +449,12 @@ function registrarPagamento() {
   const btnRegistrar = document.getElementById("btnRegistrar");
   btnRegistrar.disabled = true;
 
-  const hoje = new Date().toLocaleDateString('pt-BR');
-
   const pagamento = {
-    id: Date.now().toString(),
     descricao: item.descricao,
     valor: valor,
-    valorPago: valor,
-    itemId: item.id,
-    data: hoje
+    itemId: item.id
   };
-  
-  // Enviar para Google Sheets PRIMEIRO
+
   enviarParaSheets(pagamento, "pagamento");
 
   mostrarAlerta('✅ Pagamento registrado!', 'sucesso');
@@ -501,8 +463,7 @@ function registrarPagamento() {
 
   setTimeout(() => {
     btnRegistrar.disabled = false;
-    // Recarrega da planilha para sincronizar
-    carregarItensDaPlanilha();
+    carregarTudo();
   }, 1500);
 }
 
@@ -527,15 +488,13 @@ function confirmarDelecao() {
   const btnConfirmar = document.querySelector(".btnConfirmar");
   btnConfirmar.disabled = true;
   btnConfirmar.innerText = "Deletando...";
-  
-  // Enviar para Google Sheets PRIMEIRO
+
   deletarDaPlanilha(item.id);
   
   document.getElementById("confirmModal").style.display = "none";
   
   setTimeout(() => {
-    // Recarrega da planilha após deletar
-    carregarItensDaPlanilha();
+    carregarTudo();
     btnConfirmar.disabled = false;
     btnConfirmar.innerText = "Deletar";
     mostrarAlerta('✅ Item deletado!', 'sucesso');
