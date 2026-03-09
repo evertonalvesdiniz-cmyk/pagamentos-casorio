@@ -260,7 +260,7 @@ Essa ação não pode ser desfeita.</p>
 
 <script>
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxjhnzRM09Ec-6JU7wmCF-LkQhlcKGu9w8HkhobQNTQ_ioJGiE9fXdgQH8-1qjb2Elqkw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyNfGMVcRyCfBDrXaywGan1iLNHy0o-kt5xlPl4PCROvnLmkn8BwQtRk0y67NCMvqH/exec";
 
 let itens = [];
 let pagamentosGlobais = [];
@@ -270,7 +270,8 @@ let itemParaDeletar = null;
 document.addEventListener('DOMContentLoaded', function() {
   localStorage.clear();
   carregarTudo();
-  setInterval(carregarTudo, 3000);
+  // Sincronizar a cada 2 segundos
+  setInterval(carregarTudo, 2000);
 });
 
 // ============================================
@@ -382,7 +383,7 @@ function addItem() {
   setTimeout(() => {
     btnAdicionar.disabled = false;
     carregarTudo();
-  }, 1500);
+  }, 2000);
 }
 
 // ============================================
@@ -448,14 +449,11 @@ function registrarPagamento() {
   document.getElementById("valorPagamento").value = "";
   fecharModal();
 
+  // Aguardar 2.5 segundos para a planilha atualizar
   setTimeout(() => {
     btnRegistrar.disabled = false;
     carregarTudo();
-    // Reabrir o modal com dados atualizados
-    setTimeout(() => {
-      abrirDetalhes(itemSelecionado);
-    }, 500);
-  }, 1500);
+  }, 2500);
 }
 
 // ============================================
@@ -489,7 +487,7 @@ function confirmarDelecao() {
     btnConfirmar.disabled = false;
     btnConfirmar.innerText = "Deletar";
     mostrarAlerta('✅ Item deletado!', 'sucesso');
-  }, 1500);
+  }, 2000);
   
   itemParaDeletar = null;
 }
