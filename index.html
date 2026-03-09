@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>💍 Pagamentos do Casamento</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
 <style>
 body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI";
@@ -48,6 +50,7 @@ button{
   font-weight:bold;
   width:100%;
   cursor:pointer;
+  transition: all 0.3s ease;
 }
 button:hover{
   background:#e63d63;
@@ -55,12 +58,18 @@ button:hover{
 button:disabled{
   background:#ccc;
   cursor:not-allowed;
+  opacity:0.6;
 }
 .item{
   background:white;
   padding:15px;
   border-radius:10px;
   margin-bottom:12px;
+  transition: all 0.3s ease;
+}
+.item.pago{
+  background:#e8f7ee;
+  border-left:5px solid #4CAF50;
 }
 .topItem{
   display:flex;
@@ -76,6 +85,7 @@ button:disabled{
 .progressoBar{
   height:8px;
   background:#4CAF50;
+  transition: width 0.5s ease;
 }
 .botoes{
   display:flex;
@@ -87,10 +97,41 @@ button:disabled{
   font-size:14px;
   padding:8px;
 }
+.badge-pago{
+  display:inline-block;
+  background:#4CAF50;
+  color:white;
+  padding:4px 12px;
+  border-radius:20px;
+  font-size:12px;
+  font-weight:bold;
+  margin-top:8px;
+}
 .total{
   text-align:center;
   font-size:20px;
   font-weight:bold;
+}
+.graficos-container{
+  display:flex;
+  gap:15px;
+  margin-bottom:20px;
+}
+.grafico-card{
+  background:white;
+  padding:15px;
+  border-radius:12px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.05);
+  flex:1;
+}
+.grafico-card h3{
+  margin:0 0 10px 0;
+  font-size:14px;
+  color:#666;
+  text-align:center;
+}
+.grafico-card canvas{
+  max-width:100%;
 }
 .modal{
   position:fixed;
@@ -198,6 +239,13 @@ button:disabled{
 .btnCancelar:hover{
   background:#5a6268;
 }
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+.item.celebrando {
+  animation: pulse 0.5s ease;
+}
 </style>
 </head>
 <body>
@@ -227,6 +275,17 @@ Total pago: R$ <span id="totalPago">0</span>
 <div class="progresso">
 <div id="barraGeral" class="progressoBar" style="width:0%"></div>
 </div>
+</div>
+
+<div class="graficos-container">
+  <div class="grafico-card">
+    <h3>💰 Gastos</h3>
+    <canvas id="graficoGastos"></canvas>
+  </div>
+  <div class="grafico-card">
+    <h3>📅 Tempo</h3>
+    <canvas id="graficoTempo"></canvas>
+  </div>
 </div>
 
 <div id="lista"></div>
@@ -261,18 +320,33 @@ Essa ação não pode ser desfeita.</p>
 <script>
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyNfGMVcRyCfBDrXaywGan1iLNHy0o-kt5xlPl4PCROvnLmkn8BwQtRk0y67NCMvqH/exec";
+const DATA_CASAMENTO = new Date(2025, 3, 30); // 30 de abril de 2025
 
 let itens = [];
 let pagamentosGlobais = [];
 let itemSelecionado = null;
 let itemParaDeletar = null;
+let graficoGastosChart = null;
+let graficoTempoChart = null;
 
 document.addEventListener('DOMContentLoaded', function() {
   localStorage.clear();
   carregarTudo();
-  // Sincronizar a cada 2 segundos
   setInterval(carregarTudo, 2000);
 });
+
+// ============================================
+// CONFETE
+// ============================================
+
+function triggerConfete() {
+  confetti({
+    particleCount: 100,
+    spread: 70,
+    origin: { y: 0.6 },
+    colors: ['#ff4d6d', '#ffd700', '#ff1493', '#ff69b4', '#ff6347']
+  });
+}
 
 // ============================================
 // CARREGAR TUDO DA PLANILHA
@@ -289,11 +363,9 @@ function carregarTudo() {
   .then(([dataItens, dataPagamentos]) => {
     
     if (!dataItens.sucesso || !dataItens.itens) {
-      console.error("Erro ao carregar itens");
       return;
     }
     
-    // Limpar e recarregar itens
     itens = [];
     itens = dataItens.itens.map(item => ({
       id: item.id,
@@ -303,7 +375,6 @@ function carregarTudo() {
       valorPago: parseFloat(item.valorPago) || 0
     }));
     
-    // Guardar pagamentos globalmente
     pagamentosGlobais = [];
     if (dataPagamentos.sucesso && dataPagamentos.pagamentos) {
       pagamentosGlobais = dataPagamentos.pagamentos.map(pag => ({
@@ -316,6 +387,7 @@ function carregarTudo() {
     }
     
     render();
+    atualizarGraficos();
   })
   .catch(error => {
     console.error("Erro ao sincronizar:", error);
@@ -400,7 +472,6 @@ function abrirDetalhes(i) {
   let historico = document.getElementById("historico");
   historico.innerHTML = "";
 
-  // Filtrar pagamentos deste item
   const pagamentosItem = pagamentosGlobais.filter(p => p.itemId === item.id);
 
   if (pagamentosItem && pagamentosItem.length > 0) {
@@ -446,10 +517,13 @@ function registrarPagamento() {
   enviarParaSheets(pagamento, "pagamento");
 
   mostrarAlerta('✅ Pagamento registrado!', 'sucesso');
+  
+  // CONFETE!
+  triggerConfete();
+  
   document.getElementById("valorPagamento").value = "";
   fecharModal();
 
-  // Aguardar 2.5 segundos para a planilha atualizar
   setTimeout(() => {
     btnRegistrar.disabled = false;
     carregarTudo();
@@ -531,6 +605,93 @@ function mostrarAlerta(msg, tipo) {
 }
 
 // ============================================
+// ATUALIZAR GRÁFICOS
+// ============================================
+
+function atualizarGraficos() {
+  let totalPlanejado = 0;
+  let totalPago = 0;
+  
+  itens.forEach(item => {
+    totalPlanejado += item.valor;
+    totalPago += item.valorPago;
+  });
+
+  // Gráfico de Gastos (Pizza)
+  const ctxGastos = document.getElementById('graficoGastos').getContext('2d');
+  if (graficoGastosChart) {
+    graficoGastosChart.destroy();
+  }
+  graficoGastosChart = new Chart(ctxGastos, {
+    type: 'doughnut',
+    data: {
+      labels: ['Pago', 'Faltando'],
+      datasets: [{
+        data: [totalPago, totalPlanejado - totalPago],
+        backgroundColor: ['#4CAF50', '#ddd'],
+        borderColor: ['#fff', '#fff'],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 11 } }
+        }
+      }
+    }
+  });
+
+  // Gráfico de Tempo (Barra)
+  const hoje = new Date();
+  const diasRestantes = Math.ceil((DATA_CASAMENTO - hoje) / (1000 * 60 * 60 * 24));
+  const diasPassados = Math.ceil((hoje - new Date(2025, 0, 1)) / (1000 * 60 * 60 * 24));
+  
+  const ctxTempo = document.getElementById('graficoTempo').getContext('2d');
+  if (graficoTempoChart) {
+    graficoTempoChart.destroy();
+  }
+  graficoTempoChart = new Chart(ctxTempo, {
+    type: 'bar',
+    data: {
+      labels: ['Dias'],
+      datasets: [
+        {
+          label: 'Passados',
+          data: [diasPassados],
+          backgroundColor: '#4CAF50'
+        },
+        {
+          label: 'Restantes',
+          data: [diasRestantes],
+          backgroundColor: '#ff4d6d'
+        }
+      ]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: true,
+      scales: {
+        x: {
+          stacked: true,
+          ticks: { font: { size: 10 } }
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 11 } }
+        }
+      }
+    }
+  });
+}
+
+// ============================================
 // RENDERIZAR
 // ============================================
 
@@ -552,12 +713,13 @@ function render() {
   itens.forEach((item, i) => {
     let pago = item.valorPago;
     let progresso = (pago / item.valor) * 100;
+    let estaPago = progresso >= 100;
 
     totalPlanejado += item.valor;
     totalPago += pago;
 
     lista.innerHTML += `
-      <div class="item">
+      <div class="item ${estaPago ? 'pago' : ''}">
         <div class="topItem">
           <div>
             <strong>${item.descricao}</strong><br>
@@ -567,8 +729,9 @@ function render() {
         <div class="progresso">
           <div class="progressoBar" style="width:${progresso}%"></div>
         </div>
+        ${estaPago ? '<div class="badge-pago">✓ PAGO</div>' : ''}
         <div class="botoes">
-          <button onclick="abrirDetalhes(${i})">Ver mais</button>
+          <button onclick="abrirDetalhes(${i})" ${estaPago ? 'disabled' : ''}>Ver mais</button>
           <button onclick="remover(${i})">Excluir</button>
         </div>
       </div>
