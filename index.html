@@ -25,6 +25,40 @@ h1{
   color:#666;
   margin-bottom:20px;
 }
+.tabs{
+  display:flex;
+  gap:10px;
+  margin-bottom:20px;
+  background:white;
+  padding:10px;
+  border-radius:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.05);
+}
+.tab-btn{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:8px;
+  background:#f0f0f0;
+  color:#333;
+  font-weight:bold;
+  cursor:pointer;
+  transition: all 0.3s ease;
+}
+.tab-btn.ativo{
+  background:#ff4d6d;
+  color:white;
+}
+.tab-btn:hover{
+  background:#e63d63;
+  color:white;
+}
+.tab-content{
+  display:none;
+}
+.tab-content.ativo{
+  display:block;
+}
 .card{
   background:white;
   padding:20px;
@@ -32,7 +66,7 @@ h1{
   box-shadow:0 4px 10px rgba(0,0,0,0.05);
   margin-bottom:20px;
 }
-input{
+input, select{
   width:100%;
   padding:12px;
   margin-bottom:10px;
@@ -132,18 +166,6 @@ button:disabled{
 .grafico-card canvas{
   max-width:100%;
 }
-.tarefas-card{
-  background:white;
-  padding:20px;
-  border-radius:12px;
-  box-shadow:0 4px 10px rgba(0,0,0,0.05);
-  margin-bottom:20px;
-}
-.tarefas-card h3{
-  margin:0 0 15px 0;
-  font-size:16px;
-  color:#333;
-}
 .tarefa-formulario{
   background:#f9f9f9;
   padding:12px;
@@ -151,7 +173,7 @@ button:disabled{
   margin-bottom:15px;
   border-left:4px solid #ff4d6d;
 }
-.tarefa-formulario input{
+.tarefa-formulario input, .tarefa-formulario select{
   margin-bottom:8px;
 }
 .tarefa-formulario button{
@@ -317,77 +339,96 @@ button:disabled{
 "Cada pagamento é um passo para o grande dia ❤️"
 </div>
 
-<div class="card">
-<div id="alerta"></div>
-<input id="descricao" placeholder="Ex: Fotógrafo">
-<input id="valorTotal" type="number" placeholder="Valor total (R$)">
-<button id="btnAdicionar" onclick="addItem()">Adicionar compromisso ✨</button>
+<!-- ABAS -->
+<div class="tabs">
+  <button class="tab-btn ativo" onclick="abrirAba('pagamentos')">💰 Pagamentos</button>
+  <button class="tab-btn" onclick="abrirAba('tarefas')">📋 Tarefas</button>
 </div>
 
-<div class="card">
-<div class="total">
-Total planejado: R$ <span id="totalPlanejado">0</span>
-</div>
-<div class="total">
-Total pago: R$ <span id="totalPago">0</span>
-</div>
-<div class="total total-faltando">
-Total faltando: R$ <span id="totalFaltando">0</span>
-</div>
-<div class="progresso">
-<div id="barraGeral" class="progressoBar" style="width:0%"></div>
-</div>
+<!-- ABA PAGAMENTOS -->
+<div id="pagamentos" class="tab-content ativo">
+
+  <div class="card">
+    <div id="alerta"></div>
+    <input id="descricao" placeholder="Ex: Fotógrafo">
+    <input id="valorTotal" type="number" placeholder="Valor total (R$)">
+    <button id="btnAdicionar" onclick="addItem()">Adicionar compromisso ✨</button>
+  </div>
+
+  <div class="card">
+    <div class="total">
+      Total planejado: R$ <span id="totalPlanejado">0</span>
+    </div>
+    <div class="total">
+      Total pago: R$ <span id="totalPago">0</span>
+    </div>
+    <div class="total total-faltando">
+      Total faltando: R$ <span id="totalFaltando">0</span>
+    </div>
+    <div class="progresso">
+      <div id="barraGeral" class="progressoBar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <div class="grafico-card">
+    <h3>💰 Orçamento</h3>
+    <canvas id="graficoOrcamento"></canvas>
+  </div>
+
+  <div id="lista"></div>
+
 </div>
 
-<div class="grafico-card">
-  <h3>💰 Orçamento</h3>
-  <canvas id="graficoOrcamento"></canvas>
-</div>
+<!-- ABA TAREFAS -->
+<div id="tarefas" class="tab-content">
 
-<div id="lista"></div>
-
-<div class="tarefas-card">
-  <h3>📋 Tarefas do Casamento</h3>
-  
-  <div class="tarefa-formulario">
-    <input id="novoTarefaTexto" type="text" placeholder="Nova tarefa...">
-    <input id="novoTarefaResponsavel" type="text" placeholder="Responsável (Everton, Iara, Juntos, Financeiro)">
+  <div class="tarefa-formulario card">
+    <h3 style="margin-top:0; margin-bottom:12px;">➕ Nova Tarefa</h3>
+    <input id="novoTarefaTexto" type="text" placeholder="Descrição da tarefa...">
+    <select id="novoTarefaResponsavel">
+      <option value="Juntos">Juntos</option>
+      <option value="Everton">Everton</option>
+      <option value="Iara">Iara</option>
+    </select>
     <button onclick="adicionarNovaTarefa()">+ Adicionar Tarefa</button>
   </div>
 
-  <div id="tarefasLista"></div>
+  <div class="card">
+    <div id="tarefasLista"></div>
+  </div>
+
 </div>
 
 </div>
 
 <div id="modal" class="modal">
-<div class="modalContent">
-<h3 id="tituloItem"></h3>
-<input id="valorPagamento" type="number" placeholder="Valor pago">
-<button id="btnRegistrar" onclick="registrarPagamento()">Registrar pagamento 🎉</button>
-<h4>Histórico</h4>
-<div id="historico"></div>
-<button onclick="fecharModal()">Fechar</button>
-</div>
+  <div class="modalContent">
+    <h3 id="tituloItem"></h3>
+    <input id="valorPagamento" type="number" placeholder="Valor pago">
+    <button id="btnRegistrar" onclick="registrarPagamento()">Registrar pagamento 🎉</button>
+    <h4>Histórico</h4>
+    <div id="historico"></div>
+    <button onclick="fecharModal()">Fechar</button>
+  </div>
 </div>
 
 <div id="confirmModal" class="confirmModal">
-<div class="confirmContent">
-<h3>⚠️ Confirmar Exclusão</h3>
-<p>Tem certeza que deseja remover este item?<br>
-Essa ação não pode ser desfeita.</p>
-<div class="confirmBotoes">
-<button class="btnCancelar" onclick="cancelarDelecao()">Cancelar</button>
-<button class="btnConfirmar" onclick="confirmarDelecao()">Deletar</button>
-</div>
-</div>
+  <div class="confirmContent">
+    <h3>⚠️ Confirmar Exclusão</h3>
+    <p>Tem certeza que deseja remover este item?<br>
+      Essa ação não pode ser desfeita.</p>
+    <div class="confirmBotoes">
+      <button class="btnCancelar" onclick="cancelarDelecao()">Cancelar</button>
+      <button class="btnConfirmar" onclick="confirmarDelecao()">Deletar</button>
+    </div>
+  </div>
 </div>
 
 <iframe name="uploadFrame" id="uploadFrame"></iframe>
 
 <script>
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw4w5XexwvlEbKDTC65Abi5zLURL4ZDiXJNStQctrqiDaKKEGEBmwA9zy59TV6fUxfINw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwn5M8rT9rnsYzX2tdiY9_TunpKXk999oksfl15jOSEk1C5aDaVUbGTYb5X_QXuOYaa/exec";
 
 let itens = [];
 let pagamentosGlobais = [];
@@ -396,6 +437,35 @@ let itemSelecionado = null;
 let itemParaDeletar = null;
 let graficoOrcamentoChart = null;
 let ultimoTotalPago = 0;
+let abaAtiva = 'pagamentos';
+
+// ============================================
+// ABAS
+// ============================================
+
+function abrirAba(nomeAba) {
+  abaAtiva = nomeAba;
+  
+  // Ocultar todas as abas
+  document.getElementById('pagamentos').classList.remove('ativo');
+  document.getElementById('tarefas').classList.remove('ativo');
+  
+  // Remover ativo de todos os botões
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('ativo');
+  });
+  
+  // Ativar aba e botão clicado
+  document.getElementById(nomeAba).classList.add('ativo');
+  event.target.classList.add('ativo');
+  
+  // Carregar dados da aba
+  if (nomeAba === 'tarefas') {
+    carregarTodasAsTarefas();
+  } else {
+    carregarTudo();
+  }
+}
 
 document.addEventListener('DOMContentLoaded', function() {
   carregarTodasAsTarefas();
@@ -441,16 +511,21 @@ function toggleTarefa(tarefaId) {
   const tarefa = tarefasGlobais.find(t => t.id === tarefaId);
   if (!tarefa) return;
   
+  console.log("Toggle tarefa:", tarefaId, "feita atual:", tarefa.feita);
+  
   const form = document.createElement("form");
   form.method = "POST";
   form.action = SCRIPT_URL;
   form.target = "uploadFrame";
 
+  const novoValor = !tarefa.feita;
   const dados = {
     tipo: "toggleTarefa",
     tarefaId: tarefaId,
-    feita: !tarefa.feita
+    feita: novoValor.toString()
   };
+
+  console.log("Enviando para Apps Script:", dados);
 
   for(let key in dados){
     const input = document.createElement("input");
@@ -513,6 +588,11 @@ function adicionarNovaTarefa() {
 function renderTarefas() {
   const tarefasLista = document.getElementById("tarefasLista");
   tarefasLista.innerHTML = "";
+  
+  if (tarefasGlobais.length === 0) {
+    tarefasLista.innerHTML = '<p style="color:#999; text-align:center;">Nenhuma tarefa cadastrada</p>';
+    return;
+  }
   
   tarefasGlobais.forEach((tarefa) => {
     const tarefaHTML = `
