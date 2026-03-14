@@ -438,6 +438,9 @@ let itemParaDeletar = null;
 let graficoOrcamentoChart = null;
 let ultimoTotalPago = 0;
 let abaAtiva = 'pagamentos';
+let estaSalvandoTarefa = false;
+let intervaloTarefas = null;
+let intervaloItens = null;
 
 // ============================================
 // ABAS
@@ -470,9 +473,17 @@ function abrirAba(nomeAba) {
 document.addEventListener('DOMContentLoaded', function() {
   carregarTodasAsTarefas();
   carregarTudo();
-  // Sincronizar a cada 5 segundos (aumentado de 3s para evitar conflitos)
-  setInterval(carregarTodasAsTarefas, 5000);
-  setInterval(carregarTudo, 2000);
+  
+  // Sincronizar tarefas a cada 5 segundos
+  intervaloTarefas = setInterval(() => {
+    // SÓ sincroniza se NÃO está salvando
+    if (!estaSalvandoTarefa) {
+      carregarTodasAsTarefas();
+    }
+  }, 5000);
+  
+  // Sincronizar itens a cada 2 segundos
+  intervaloItens = setInterval(carregarTudo, 2000);
 });
 
 // ============================================
@@ -512,9 +523,10 @@ function toggleTarefa(tarefaId) {
   const tarefa = tarefasGlobais.find(t => t.id === tarefaId);
   if (!tarefa) return;
   
-  console.log("Toggle tarefa:", tarefaId, "feita atual:", tarefa.feita);
+  // Marcar que está salvando (pausa sincronização automática)
+  estaSalvandoTarefa = true;
   
-  // Mostrar feedback visual
+  console.log("Toggle tarefa:", tarefaId, "feita atual:", tarefa.feita);
   mostrarAlerta('⏳ Salvando tarefa...', 'sucesso');
   
   const form = document.createElement("form");
@@ -543,11 +555,57 @@ function toggleTarefa(tarefaId) {
   form.submit();
   form.remove();
   
-  // Aguardar 2 segundos para a planilha processar a escrita
+  // Esperar 3.5 segundos para a planilha processar
   setTimeout(() => {
-    console.log("Recarregando tarefas após toggle...");
-    carregarTodasAsTarefas();
-  }, 2000);
+    console.log("Recarregando tarefas (tentativa 1)...");
+    carregarTodasAsTarefasComRetry(tarefaId, novoValor, 1);
+  }, 3500);
+}
+
+// Função de retry automático
+function carregarTodasAsTarefasComRetry(tarefaId, novoValor, tentativa) {
+  const urlTarefas = SCRIPT_URL + "?acao=getTarefas";
+  
+  fetch(urlTarefas)
+    .then(r => r.json())
+    .then(data => {
+      if (data.sucesso && data.tarefas) {
+        // Verificar se a tarefa foi atualizada
+        const tarefaAtualizada = data.tarefas.find(t => t.id === tarefaId);
+        
+        if (tarefaAtualizada && tarefaAtualizada.feita === novoValor) {
+          // ✅ Atualização bem-sucedida!
+          console.log("Tarefa atualizada com sucesso!");
+          tarefasGlobais = data.tarefas;
+          renderTarefas();
+          mostrarAlerta('✅ Tarefa salva!', 'sucesso');
+          estaSalvandoTarefa = false;
+        } else if (tentativa < 3) {
+          // ❌ Não atualizou ainda, tenta novamente
+          console.log("Tentativa " + tentativa + " falhou, tentando novamente...");
+          setTimeout(() => {
+            carregarTodasAsTarefasComRetry(tarefaId, novoValor, tentativa + 1);
+          }, 2000);
+        } else {
+          // ❌ 3 tentativas falharam
+          console.log("Erro após 3 tentativas. Recarregando força...");
+          tarefasGlobais = data.tarefas;
+          renderTarefas();
+          mostrarAlerta('⚠️ Erro ao salvar. Recarregue a página.', 'erro');
+          estaSalvandoTarefa = false;
+        }
+      }
+    })
+    .catch(error => {
+      console.error("Erro ao carregar tarefas:", error);
+      if (tentativa < 3) {
+        setTimeout(() => {
+          carregarTodasAsTarefasComRetry(tarefaId, novoValor, tentativa + 1);
+        }, 2000);
+      } else {
+        estaSalvandoTarefa = false;
+      }
+    });
 }
 
 function adicionarNovaTarefa() {
