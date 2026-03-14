@@ -505,17 +505,22 @@ function triggerConfete() {
 
 function carregarTodasAsTarefas() {
   const urlTarefas = SCRIPT_URL + "?acao=getTarefas";
+  console.log(">>> CARREGANDO tarefas de:", urlTarefas);
   
   fetch(urlTarefas)
     .then(r => r.json())
     .then(data => {
+      console.log(">>> RESPOSTA recebida:", data);
       if (data.sucesso && data.tarefas) {
+        console.log(">>> SUCESSO! Tarefas carregadas:", data.tarefas.length);
         tarefasGlobais = data.tarefas;
         renderTarefas();
+      } else {
+        console.log(">>> ERRO! Resposta inválida");
       }
     })
     .catch(error => {
-      console.error("Erro ao carregar tarefas:", error);
+      console.error(">>> ERRO ao carregar tarefas:", error);
     });
 }
 
@@ -523,89 +528,41 @@ function toggleTarefa(tarefaId) {
   const tarefa = tarefasGlobais.find(t => t.id === tarefaId);
   if (!tarefa) return;
   
-  // Marcar que está salvando (pausa sincronização automática)
   estaSalvandoTarefa = true;
+  console.log(">>> MARCANDO tarefa:", tarefaId, "estado atual:", tarefa.feita);
   
-  console.log("Toggle tarefa:", tarefaId, "feita atual:", tarefa.feita);
-  mostrarAlerta('⏳ Salvando tarefa...', 'sucesso');
-  
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = SCRIPT_URL;
-  form.target = "uploadFrame";
-
   const novoValor = !tarefa.feita;
-  const dados = {
+  const dados = new URLSearchParams({
     tipo: "toggleTarefa",
     tarefaId: tarefaId,
     feita: novoValor.toString()
-  };
+  });
 
-  console.log("Enviando para Apps Script:", dados);
-
-  for(let key in dados){
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = key;
-    input.value = dados[key];
-    form.appendChild(input);
-  }
-
-  document.body.appendChild(form);
-  form.submit();
-  form.remove();
+  console.log(">>> ENVIANDO POST via fetch:", dados.toString());
   
-  // Esperar 3.5 segundos para a planilha processar
-  setTimeout(() => {
-    console.log("Recarregando tarefas (tentativa 1)...");
-    carregarTodasAsTarefasComRetry(tarefaId, novoValor, 1);
-  }, 3500);
-}
-
-// Função de retry automático
-function carregarTodasAsTarefasComRetry(tarefaId, novoValor, tentativa) {
-  const urlTarefas = SCRIPT_URL + "?acao=getTarefas";
-  
-  fetch(urlTarefas)
-    .then(r => r.json())
-    .then(data => {
-      if (data.sucesso && data.tarefas) {
-        // Verificar se a tarefa foi atualizada
-        const tarefaAtualizada = data.tarefas.find(t => t.id === tarefaId);
-        
-        if (tarefaAtualizada && tarefaAtualizada.feita === novoValor) {
-          // ✅ Atualização bem-sucedida!
-          console.log("Tarefa atualizada com sucesso!");
-          tarefasGlobais = data.tarefas;
-          renderTarefas();
-          mostrarAlerta('✅ Tarefa salva!', 'sucesso');
-          estaSalvandoTarefa = false;
-        } else if (tentativa < 3) {
-          // ❌ Não atualizou ainda, tenta novamente
-          console.log("Tentativa " + tentativa + " falhou, tentando novamente...");
-          setTimeout(() => {
-            carregarTodasAsTarefasComRetry(tarefaId, novoValor, tentativa + 1);
-          }, 2000);
-        } else {
-          // ❌ 3 tentativas falharam
-          console.log("Erro após 3 tentativas. Recarregando força...");
-          tarefasGlobais = data.tarefas;
-          renderTarefas();
-          mostrarAlerta('⚠️ Erro ao salvar. Recarregue a página.', 'erro');
-          estaSalvandoTarefa = false;
-        }
-      }
-    })
-    .catch(error => {
-      console.error("Erro ao carregar tarefas:", error);
-      if (tentativa < 3) {
-        setTimeout(() => {
-          carregarTodasAsTarefasComRetry(tarefaId, novoValor, tentativa + 1);
-        }, 2000);
-      } else {
-        estaSalvandoTarefa = false;
-      }
-    });
+  // Usar fetch POST em vez de form.submit (mais confiável)
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    body: dados
+  })
+  .then(response => {
+    console.log(">>> POST enviado! Status:", response.status);
+    return response.text();
+  })
+  .then(result => {
+    console.log(">>> Resposta do Apps Script:", result);
+    // Aguardar 3 segundos e recarregar
+    console.log(">>> Aguardando 3s antes de recarregar...");
+    setTimeout(() => {
+      console.log(">>> Recarregando tarefas agora...");
+      carregarTodasAsTarefas();
+      estaSalvandoTarefa = false;
+    }, 3000);
+  })
+  .catch(error => {
+    console.error(">>> ERRO ao enviar POST:", error);
+    estaSalvandoTarefa = false;
+  });
 }
 
 function adicionarNovaTarefa() {
@@ -617,41 +574,43 @@ function adicionarNovaTarefa() {
     return;
   }
 
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = SCRIPT_URL;
-  form.target = "uploadFrame";
-
-  const dados = {
+  const dados = new URLSearchParams({
     tipo: "salvarTarefa",
     tarefaTexto: descricao,
     responsavel: responsavel
-  };
+  });
 
-  for(let key in dados){
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = key;
-    input.value = dados[key];
-    form.appendChild(input);
-  }
+  console.log(">>> CRIANDO nova tarefa via fetch");
+  
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    body: dados
+  })
+  .then(response => {
+    console.log(">>> POST enviado! Status:", response.status);
+    return response.text();
+  })
+  .then(result => {
+    console.log(">>> Tarefa criada! Resposta:", result);
+    mostrarAlerta('✅ Tarefa criada!', 'sucesso');
+    document.getElementById("novoTarefaTexto").value = "";
+    document.getElementById("novoTarefaResponsavel").value = "Juntos";
 
-  document.body.appendChild(form);
-  form.submit();
-  form.remove();
-
-  mostrarAlerta('✅ Tarefa criada!', 'sucesso');
-  document.getElementById("novoTarefaTexto").value = "";
-  document.getElementById("novoTarefaResponsavel").value = "Juntos";
-
-  setTimeout(() => {
-    carregarTodasAsTarefas();
-  }, 1000);
+    setTimeout(() => {
+      carregarTodasAsTarefas();
+    }, 1000);
+  })
+  .catch(error => {
+    console.error(">>> ERRO ao criar tarefa:", error);
+    mostrarAlerta('❌ Erro ao criar tarefa', 'erro');
+  });
 }
 
 function renderTarefas() {
   const tarefasLista = document.getElementById("tarefasLista");
   tarefasLista.innerHTML = "";
+  
+  console.log(">>> RENDERIZANDO", tarefasGlobais.length, "tarefas");
   
   if (tarefasGlobais.length === 0) {
     tarefasLista.innerHTML = '<p style="color:#999; text-align:center;">Nenhuma tarefa cadastrada</p>';
@@ -659,6 +618,7 @@ function renderTarefas() {
   }
   
   tarefasGlobais.forEach((tarefa) => {
+    console.log("   -", tarefa.texto, "| feita:", tarefa.feita);
     const tarefaHTML = `
       <div class="tarefa-item ${tarefa.feita ? 'feita' : ''}" onclick="toggleTarefa('${tarefa.id}')">
         <input type="checkbox" class="tarefa-checkbox" ${tarefa.feita ? 'checked' : ''} onclick="event.stopPropagation()">
