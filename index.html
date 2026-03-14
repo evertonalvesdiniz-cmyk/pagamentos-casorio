@@ -543,12 +543,13 @@ function toggleTarefa(tarefaId) {
   
   console.log("=".repeat(60));
   console.log(">>> [TOGGLE] INICIANDO");
-  console.log(">>> [TOGGLE] ID:", tarefaId);
   console.log(">>> [TOGGLE] Texto:", tarefa.texto);
   console.log(">>> [TOGGLE] Mudando de:", tarefa.feita, "para:", novoValor);
-  console.log(">>> [TOGGLE] URL:", SCRIPT_URL);
   
-  // Criar FormData em vez de URLSearchParams
+  // Mostrar status visual
+  mostrarAlerta(`⏳ Salvando: ${tarefa.texto.substring(0, 20)}...`, 'sucesso');
+  
+  // Criar FormData
   const formData = new FormData();
   formData.append("tipo", "toggleTarefa");
   formData.append("tarefaId", tarefaId);
@@ -561,35 +562,73 @@ function toggleTarefa(tarefaId) {
     body: formData
   })
   .then(response => {
-    console.log(">>> [TOGGLE] Resposta recebida!");
-    console.log(">>> [TOGGLE] Status:", response.status);
-    console.log(">>> [TOGGLE] OK?", response.ok);
-    
+    console.log(">>> [TOGGLE] POST Status:", response.status);
     if (!response.ok) {
-      throw new Error("HTTP error, status = " + response.status);
+      throw new Error("HTTP error " + response.status);
     }
-    
     return response.text();
   })
   .then(result => {
-    console.log(">>> [TOGGLE] Texto da resposta:", result);
-    console.log(">>> [TOGGLE] Aguardando 5s para recarregar...");
+    console.log(">>> [TOGGLE] POST respondeu:", result);
+    console.log(">>> [TOGGLE] Iniciando polling para verificar salvamento...");
     
-    setTimeout(() => {
-      console.log(">>> [TOGGLE] RECARREGANDO TAREFAS");
-      carregarTodasAsTarefas();
-      estaSalvandoTarefa = false;
-      console.log("=".repeat(60));
-    }, 5000);
+    // Agora fazer polling para verificar se realmente salvou
+    verificarSalvamentoDaTarefa(tarefaId, novoValor, tarefa.texto, 0);
   })
   .catch(error => {
-    console.error(">>> [TOGGLE] ❌ ERRO CAPTURADO!");
-    console.error(">>> [TOGGLE] Mensagem:", error.message);
-    console.error(">>> [TOGGLE] Stack:", error.stack);
+    console.error(">>> [TOGGLE] ❌ ERRO no POST:", error);
+    mostrarAlerta("❌ Erro ao salvar. Tente novamente.", "erro");
     estaSalvandoTarefa = false;
-    mostrarAlerta("❌ Erro ao salvar tarefa. Tente novamente.", "erro");
-    console.log("=".repeat(60));
   });
+}
+
+function verificarSalvamentoDaTarefa(tarefaId, novoValor, textoTarefa, tentativa) {
+  console.log(`>>> [POLLING] Tentativa ${tentativa + 1}/10 para ${textoTarefa}`);
+  
+  if (tentativa > 10) {
+    console.error(">>> [POLLING] ❌ Falhou após 10 tentativas!");
+    mostrarAlerta(`❌ Não conseguiu salvar após ${tentativa} tentativas.`, "erro");
+    estaSalvandoTarefa = false;
+    return;
+  }
+  
+  // Aguardar 500ms antes de verificar
+  setTimeout(() => {
+    console.log(`>>> [POLLING] Carregando tarefas (tentativa ${tentativa + 1})...`);
+    
+    const urlTarefas = SCRIPT_URL + "?acao=getTarefas";
+    
+    fetch(urlTarefas)
+      .then(r => r.json())
+      .then(data => {
+        if (!data.sucesso || !data.tarefas) {
+          throw new Error("Resposta inválida");
+        }
+        
+        // Procurar pela tarefa
+        const tarefaAtualizada = data.tarefas.find(t => t.id === tarefaId);
+        
+        if (tarefaAtualizada && tarefaAtualizada.feita === novoValor) {
+          // ✅ SUCESSO! Tarefa foi salva com o novo valor!
+          console.log(`>>> [POLLING] ✅ SUCESSO! Tarefa foi salva como ${novoValor}!`);
+          mostrarAlerta(`✅ Salvo: ${textoTarefa.substring(0, 20)}`, "sucesso");
+          
+          // Atualizar dados
+          tarefasGlobais = data.tarefas;
+          renderTarefas();
+          estaSalvandoTarefa = false;
+        } else {
+          // ❌ Ainda não atualizou, tentar novamente
+          console.log(`>>> [POLLING] Ainda não atualizou (feita: ${tarefaAtualizada ? tarefaAtualizada.feita : 'NOT FOUND'}). Tentando novamente...`);
+          verificarSalvamentoDaTarefa(tarefaId, novoValor, textoTarefa, tentativa + 1);
+        }
+      })
+      .catch(error => {
+        console.error(`>>> [POLLING] ❌ Erro na tentativa ${tentativa + 1}:`, error);
+        // Tentar novamente
+        verificarSalvamentoDaTarefa(tarefaId, novoValor, textoTarefa, tentativa + 1);
+      });
+  }, 500);
 }
 
 function adicionarNovaTarefa() {
