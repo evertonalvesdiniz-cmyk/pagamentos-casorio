@@ -424,7 +424,7 @@ button:disabled{
   </div>
 </div>
 
-<iframe name="uploadFrame" id="uploadFrame"></iframe>
+
 
 <script>
 
@@ -534,54 +534,62 @@ function carregarTodasAsTarefas() {
 function toggleTarefa(tarefaId) {
   const tarefa = tarefasGlobais.find(t => t.id === tarefaId);
   if (!tarefa) {
-    console.log(">>> ERRO: Tarefa não encontrada no array!");
+    console.error(">>> ERRO: Tarefa não encontrada!");
     return;
   }
   
   estaSalvandoTarefa = true;
   const novoValor = !tarefa.feita;
   
-  console.log("=".repeat(50));
-  console.log(">>> INICIANDO TOGGLE");
-  console.log(">>> Tarefa ID:", tarefaId);
-  console.log(">>> Estado atual:", tarefa.feita);
-  console.log(">>> Novo estado:", novoValor);
-  console.log(">>> ENVIANDO POST para:", SCRIPT_URL);
-  console.log("=".repeat(50));
+  console.log("=".repeat(60));
+  console.log(">>> [TOGGLE] INICIANDO");
+  console.log(">>> [TOGGLE] ID:", tarefaId);
+  console.log(">>> [TOGGLE] Texto:", tarefa.texto);
+  console.log(">>> [TOGGLE] Mudando de:", tarefa.feita, "para:", novoValor);
+  console.log(">>> [TOGGLE] URL:", SCRIPT_URL);
   
-  // Usar form.submit() (mais confiável com Google Apps Script)
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = SCRIPT_URL;
-  form.target = "uploadFrame";
-
-  const dados = {
-    tipo: "toggleTarefa",
-    tarefaId: tarefaId,
-    feita: novoValor.toString()
-  };
-
-  for(let key in dados){
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = key;
-    input.value = dados[key];
-    console.log(">>> Campo:", key, "=", dados[key]);
-    form.appendChild(input);
-  }
-
-  document.body.appendChild(form);
-  form.submit();
-  console.log(">>> Form submitted!");
-  form.remove();
+  // Criar FormData em vez de URLSearchParams
+  const formData = new FormData();
+  formData.append("tipo", "toggleTarefa");
+  formData.append("tarefaId", tarefaId);
+  formData.append("feita", novoValor.toString());
   
-  console.log(">>> Aguardando 6 segundos antes de recarregar...");
-  setTimeout(() => {
-    console.log(">>> Recarregando tarefas...");
-    carregarTodasAsTarefas();
+  console.log(">>> [TOGGLE] Enviando fetch POST...");
+  
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    body: formData
+  })
+  .then(response => {
+    console.log(">>> [TOGGLE] Resposta recebida!");
+    console.log(">>> [TOGGLE] Status:", response.status);
+    console.log(">>> [TOGGLE] OK?", response.ok);
+    
+    if (!response.ok) {
+      throw new Error("HTTP error, status = " + response.status);
+    }
+    
+    return response.text();
+  })
+  .then(result => {
+    console.log(">>> [TOGGLE] Texto da resposta:", result);
+    console.log(">>> [TOGGLE] Aguardando 5s para recarregar...");
+    
+    setTimeout(() => {
+      console.log(">>> [TOGGLE] RECARREGANDO TAREFAS");
+      carregarTodasAsTarefas();
+      estaSalvandoTarefa = false;
+      console.log("=".repeat(60));
+    }, 5000);
+  })
+  .catch(error => {
+    console.error(">>> [TOGGLE] ❌ ERRO CAPTURADO!");
+    console.error(">>> [TOGGLE] Mensagem:", error.message);
+    console.error(">>> [TOGGLE] Stack:", error.stack);
     estaSalvandoTarefa = false;
-    console.log("=".repeat(50));
-  }, 6000);
+    mostrarAlerta("❌ Erro ao salvar tarefa. Tente novamente.", "erro");
+    console.log("=".repeat(60));
+  });
 }
 
 function adicionarNovaTarefa() {
@@ -593,24 +601,23 @@ function adicionarNovaTarefa() {
     return;
   }
 
-  const dados = new URLSearchParams({
-    tipo: "salvarTarefa",
-    tarefaTexto: descricao,
-    responsavel: responsavel
-  });
+  const formData = new FormData();
+  formData.append("tipo", "salvarTarefa");
+  formData.append("tarefaTexto", descricao);
+  formData.append("responsavel", responsavel);
 
-  console.log(">>> CRIANDO nova tarefa via fetch");
+  console.log(">>> [CRIAR] Criando nova tarefa:", descricao);
   
   fetch(SCRIPT_URL, {
     method: "POST",
-    body: dados
+    body: formData
   })
   .then(response => {
-    console.log(">>> POST enviado! Status:", response.status);
+    console.log(">>> [CRIAR] Status:", response.status);
     return response.text();
   })
   .then(result => {
-    console.log(">>> Tarefa criada! Resposta:", result);
+    console.log(">>> [CRIAR] Resposta:", result);
     mostrarAlerta('✅ Tarefa criada!', 'sucesso');
     document.getElementById("novoTarefaTexto").value = "";
     document.getElementById("novoTarefaResponsavel").value = "Juntos";
@@ -620,7 +627,7 @@ function adicionarNovaTarefa() {
     }, 1000);
   })
   .catch(error => {
-    console.error(">>> ERRO ao criar tarefa:", error);
+    console.error(">>> [CRIAR] Erro:", error);
     mostrarAlerta('❌ Erro ao criar tarefa', 'erro');
   });
 }
