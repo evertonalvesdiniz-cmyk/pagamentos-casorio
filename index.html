@@ -428,7 +428,7 @@ button:disabled{
 
 <script>
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbylluczJR64kXmEy7fNlFGIppuT1IavwA5A_SAzF8XxhRYjhFpfaSgoMNMFkfijXRUoqw/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwsrgA3vUSuRiz3r2rl5vPMgKt5gdUi9deqXIxnizBpqeZdhVTnWqBbprOorpXtBTnQRg/exec";
 
 let itens = [];
 let pagamentosGlobais = [];
@@ -474,14 +474,7 @@ document.addEventListener('DOMContentLoaded', function() {
   carregarTodasAsTarefas();
   carregarTudo();
   
-  // Sincronizar tarefas a cada 5 segundos
-  intervaloTarefas = setInterval(() => {
-    // SÓ sincroniza se NÃO está salvando
-    if (!estaSalvandoTarefa) {
-      carregarTodasAsTarefas();
-    }
-  }, 5000);
-  
+  // NÃO sincroniza tarefas automaticamente (evita conflito)
   // Sincronizar itens a cada 2 segundos
   intervaloItens = setInterval(carregarTudo, 2000);
 });
@@ -540,7 +533,6 @@ function toggleTarefa(tarefaId) {
 
   console.log(">>> ENVIANDO POST via fetch:", dados.toString());
   
-  // Usar fetch POST em vez de form.submit (mais confiável)
   fetch(SCRIPT_URL, {
     method: "POST",
     body: dados
@@ -551,13 +543,13 @@ function toggleTarefa(tarefaId) {
   })
   .then(result => {
     console.log(">>> Resposta do Apps Script:", result);
-    // Aguardar 3 segundos e recarregar
-    console.log(">>> Aguardando 3s antes de recarregar...");
+    // Aguardar 5 segundos para ter CERTEZA que atualizou
+    console.log(">>> Aguardando 5s antes de recarregar...");
     setTimeout(() => {
       console.log(">>> Recarregando tarefas agora...");
       carregarTodasAsTarefas();
       estaSalvandoTarefa = false;
-    }, 3000);
+    }, 5000);
   })
   .catch(error => {
     console.error(">>> ERRO ao enviar POST:", error);
