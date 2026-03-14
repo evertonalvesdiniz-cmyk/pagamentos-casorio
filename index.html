@@ -144,6 +144,20 @@ button:disabled{
   font-size:16px;
   color:#333;
 }
+.tarefa-formulario{
+  background:#f9f9f9;
+  padding:12px;
+  border-radius:8px;
+  margin-bottom:15px;
+  border-left:4px solid #ff4d6d;
+}
+.tarefa-formulario input{
+  margin-bottom:8px;
+}
+.tarefa-formulario button{
+  padding:8px;
+  font-size:14px;
+}
 .tarefa-item{
   display:flex;
   align-items:center;
@@ -334,6 +348,13 @@ Total faltando: R$ <span id="totalFaltando">0</span>
 
 <div class="tarefas-card">
   <h3>📋 Tarefas do Casamento</h3>
+  
+  <div class="tarefa-formulario">
+    <input id="novoTarefaTexto" type="text" placeholder="Nova tarefa...">
+    <input id="novoTarefaResponsavel" type="text" placeholder="Responsável (Everton, Iara, Juntos, Financeiro)">
+    <button onclick="adicionarNovaTarefa()">+ Adicionar Tarefa</button>
+  </div>
+
   <div id="tarefasLista"></div>
 </div>
 
@@ -366,63 +387,20 @@ Essa ação não pode ser desfeita.</p>
 
 <script>
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyyNfGMVcRyCfBDrXaywGan1iLNHy0o-kt5xlPl4PCROvnLmkn8BwQtRk0y67NCMvqH/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbw4w5XexwvlEbKDTC65Abi5zLURL4ZDiXJNStQctrqiDaKKEGEBmwA9zy59TV6fUxfINw/exec";
 
 let itens = [];
 let pagamentosGlobais = [];
+let tarefasGlobais = [];
 let itemSelecionado = null;
 let itemParaDeletar = null;
 let graficoOrcamentoChart = null;
 let ultimoTotalPago = 0;
 
-// TAREFAS
-const tarefasData = [
-  { texto: "Responder questionário cerimônia", responsavel: "Juntos" },
-  { texto: "Cartório", responsavel: "Everton" },
-  { texto: "Live", responsavel: "Everton" },
-  { texto: "Cortar madeiras", responsavel: "Everton" },
-  { texto: "Porta doce madeira", responsavel: "Iara" },
-  { texto: "Soupla - Juta", responsavel: "Iara" },
-  { texto: "Quadro banheiro", responsavel: "Iara" },
-  { texto: "Show pirotécnico", responsavel: "Everton" },
-  { texto: "Bolo fake", responsavel: "Iara" },
-  { texto: "Pétalas", responsavel: "Iara" },
-  { texto: "Tecido da mesa - meio", responsavel: "Iara" },
-  { texto: "Revelar nossas fotos", responsavel: "Iara" },
-  { texto: "Fotos kids", responsavel: "Juntos" },
-  { texto: "Comprar verniz", responsavel: "Juntos" },
-  { texto: "Espelho + adesivo", responsavel: "Iara" },
-  { texto: "Vestido Sofia", responsavel: "Juntos" },
-  { texto: "Roupa Arthur", responsavel: "Juntos" },
-  { texto: "Roupa Neymar", responsavel: "Iara" },
-  { texto: "Perfume novios", responsavel: "Juntos" },
-  { texto: "Roupa noivo", responsavel: "Juntos" },
-  { texto: "Confirmar roupa pais - Denise", responsavel: "Juntos" },
-  { texto: "Alinhar make meninas", responsavel: "Iara" },
-  { texto: "Kit banheiro", responsavel: "Juntos" },
-  { texto: "Marshmellow", responsavel: "Juntos" },
-  { texto: "Almoço dia 29", responsavel: "Financeiro" },
-  { texto: "Champagne", responsavel: "Juntos" },
-  { texto: "Taça", responsavel: "Juntos" },
-  { texto: "Lençol lágrimas", responsavel: "Juntos" },
-  { texto: "Valsa", responsavel: "Juntos" },
-  { texto: "Recado nas lembrancinhas", responsavel: "Iara" },
-  { texto: "Xícara lembrancinhas", responsavel: "Iara" },
-  { texto: "Café lembrancinhas", responsavel: "Everton" },
-  { texto: "Lembraninha kids", responsavel: "Iara" },
-  { texto: "Núpcias", responsavel: "Iara" },
-  { texto: "Marcar barbeiro", responsavel: "Everton" },
-  { texto: "Cupcake", responsavel: "Financeiro" },
-  { texto: "Novinhos - Topo bolo", responsavel: "Financeiro" }
-];
-
-let tarefasFeitas = [];
-
 document.addEventListener('DOMContentLoaded', function() {
-  localStorage.clear();
-  carregarTarefas();
-  renderTarefas();
+  carregarTodasAsTarefas();
   carregarTudo();
+  setInterval(carregarTodasAsTarefas, 3000);
   setInterval(carregarTudo, 2000);
 });
 
@@ -440,43 +418,106 @@ function triggerConfete() {
 }
 
 // ============================================
-// GERENCIAR TAREFAS
+// GERENCIAR TAREFAS (SINCRONIZADAS)
 // ============================================
 
-function carregarTarefas() {
-  const tarefasArmazenadas = localStorage.getItem("tarefas_feitas");
-  if (tarefasArmazenadas) {
-    tarefasFeitas = JSON.parse(tarefasArmazenadas);
-  }
+function carregarTodasAsTarefas() {
+  const urlTarefas = SCRIPT_URL + "?acao=getTarefas";
+  
+  fetch(urlTarefas)
+    .then(r => r.json())
+    .then(data => {
+      if (data.sucesso && data.tarefas) {
+        tarefasGlobais = data.tarefas;
+        renderTarefas();
+      }
+    })
+    .catch(error => {
+      console.error("Erro ao carregar tarefas:", error);
+    });
 }
 
-function salvarTarefas() {
-  localStorage.setItem("tarefas_feitas", JSON.stringify(tarefasFeitas));
+function toggleTarefa(tarefaId) {
+  const tarefa = tarefasGlobais.find(t => t.id === tarefaId);
+  if (!tarefa) return;
+  
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = SCRIPT_URL;
+  form.target = "uploadFrame";
+
+  const dados = {
+    tipo: "toggleTarefa",
+    tarefaId: tarefaId,
+    feita: !tarefa.feita
+  };
+
+  for(let key in dados){
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = dados[key];
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+  
+  setTimeout(() => {
+    carregarTodasAsTarefas();
+  }, 500);
 }
 
-function toggleTarefa(index) {
-  const texto = tarefasData[index].texto;
-  const posicao = tarefasFeitas.indexOf(texto);
-  
-  if (posicao > -1) {
-    tarefasFeitas.splice(posicao, 1);
-  } else {
-    tarefasFeitas.push(texto);
+function adicionarNovaTarefa() {
+  const descricao = document.getElementById("novoTarefaTexto").value.trim();
+  const responsavel = document.getElementById("novoTarefaResponsavel").value.trim() || "Juntos";
+
+  if (!descricao) {
+    mostrarAlerta('Digite a descrição da tarefa', 'erro');
+    return;
   }
-  
-  salvarTarefas();
-  renderTarefas();
+
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = SCRIPT_URL;
+  form.target = "uploadFrame";
+
+  const dados = {
+    tipo: "salvarTarefa",
+    tarefaTexto: descricao,
+    responsavel: responsavel
+  };
+
+  for(let key in dados){
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = dados[key];
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
+
+  mostrarAlerta('✅ Tarefa criada!', 'sucesso');
+  document.getElementById("novoTarefaTexto").value = "";
+  document.getElementById("novoTarefaResponsavel").value = "Juntos";
+
+  setTimeout(() => {
+    carregarTodasAsTarefas();
+  }, 1000);
 }
 
 function renderTarefas() {
   const tarefasLista = document.getElementById("tarefasLista");
   tarefasLista.innerHTML = "";
   
-  tarefasData.forEach((tarefa, index) => {
-    const feita = tarefasFeitas.includes(tarefa.texto);
+  tarefasGlobais.forEach((tarefa) => {
     const tarefaHTML = `
-      <div class="tarefa-item ${feita ? 'feita' : ''}" onclick="toggleTarefa(${index})">
-        <input type="checkbox" class="tarefa-checkbox" ${feita ? 'checked' : ''} onclick="event.stopPropagation()">
+      <div class="tarefa-item ${tarefa.feita ? 'feita' : ''}" onclick="toggleTarefa('${tarefa.id}')">
+        <input type="checkbox" class="tarefa-checkbox" ${tarefa.feita ? 'checked' : ''} onclick="event.stopPropagation()">
         <div class="tarefa-texto">${tarefa.texto}</div>
         <div class="tarefa-responsavel">${tarefa.responsavel}</div>
       </div>
