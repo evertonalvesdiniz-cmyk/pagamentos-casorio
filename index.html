@@ -648,14 +648,30 @@ function renderTarefas() {
     const statusStr = tarefa.feita ? "✓ FEITA" : "○ NÃO FEITA";
     console.log(">>> [RENDER]", idx+1, ":", tarefa.texto.substring(0, 30), "|", statusStr);
     
-    const tarefaHTML = `
-      <div class="tarefa-item ${tarefa.feita ? 'feita' : ''}" onclick="toggleTarefa('${tarefa.id}')">
-        <input type="checkbox" class="tarefa-checkbox" ${tarefa.feita ? 'checked' : ''} onclick="event.stopPropagation()">
-        <div class="tarefa-texto">${tarefa.texto}</div>
-        <div class="tarefa-responsavel">${tarefa.responsavel}</div>
-      </div>
+    // Criar elemento diretamente em vez de innerHTML (mais seguro)
+    const div = document.createElement("div");
+    div.className = `tarefa-item ${tarefa.feita ? 'feita' : ''}`;
+    div.innerHTML = `
+      <input type="checkbox" class="tarefa-checkbox" ${tarefa.feita ? 'checked' : ''}>
+      <div class="tarefa-texto">${tarefa.texto}</div>
+      <div class="tarefa-responsavel">${tarefa.responsavel}</div>
     `;
-    tarefasLista.innerHTML += tarefaHTML;
+    
+    // Adicionar evento de clique diretamente
+    div.addEventListener('click', () => {
+      console.log(">>> [CLICK] Clicou em:", tarefa.texto);
+      toggleTarefa(tarefa.id);
+    });
+    
+    // Checkbox NÃO dispara o toggle (apenas visual)
+    const checkbox = div.querySelector('.tarefa-checkbox');
+    if (checkbox) {
+      checkbox.addEventListener('click', (e) => {
+        e.stopPropagation();
+      });
+    }
+    
+    tarefasLista.appendChild(div);
   });
   
   console.log(">>> [RENDER] Renderização concluída!");
