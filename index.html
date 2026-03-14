@@ -201,13 +201,6 @@ button:disabled{
   text-decoration:line-through;
   color:#999;
 }
-.tarefa-checkbox{
-  width:24px;
-  height:24px;
-  margin-right:12px;
-  cursor:pointer;
-  accent-color:#4CAF50;
-}
 .tarefa-texto{
   flex:1;
   font-size:14px;
@@ -687,30 +680,19 @@ function renderTarefas() {
     const statusStr = tarefa.feita ? "✓ FEITA" : "○ NÃO FEITA";
     console.log(">>> [RENDER]", idx+1, ":", tarefa.texto.substring(0, 30), "|", statusStr);
     
-    // Criar elemento diretamente em vez de innerHTML (mais seguro)
-    const div = document.createElement("div");
-    div.className = `tarefa-item ${tarefa.feita ? 'feita' : ''}`;
-    div.innerHTML = `
-      <input type="checkbox" class="tarefa-checkbox" ${tarefa.feita ? 'checked' : ''}>
-      <div class="tarefa-texto">${tarefa.texto}</div>
-      <div class="tarefa-responsavel">${tarefa.responsavel}</div>
+    const btnText = tarefa.feita ? "✓ Desmarcar" : "○ Marcar";
+    const btnClass = tarefa.feita ? "btn-desmarcar" : "btn-marcar";
+    
+    const tarefaHTML = `
+      <div class="tarefa-item ${tarefa.feita ? 'feita' : ''}">
+        <button class="tarefa-btn ${btnClass}" onclick="toggleTarefa('${tarefa.id}')" style="margin-right: 10px; padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; color: white; background: ${tarefa.feita ? '#4CAF50' : '#999'};">
+          ${btnText}
+        </button>
+        <div class="tarefa-texto">${tarefa.texto}</div>
+        <div class="tarefa-responsavel">${tarefa.responsavel}</div>
+      </div>
     `;
-    
-    // Adicionar evento de clique diretamente
-    div.addEventListener('click', () => {
-      console.log(">>> [CLICK] Clicou em:", tarefa.texto);
-      toggleTarefa(tarefa.id);
-    });
-    
-    // Checkbox NÃO dispara o toggle (apenas visual)
-    const checkbox = div.querySelector('.tarefa-checkbox');
-    if (checkbox) {
-      checkbox.addEventListener('click', (e) => {
-        e.stopPropagation();
-      });
-    }
-    
-    tarefasLista.appendChild(div);
+    tarefasLista.innerHTML += tarefaHTML;
   });
   
   console.log(">>> [RENDER] Renderização concluída!");
