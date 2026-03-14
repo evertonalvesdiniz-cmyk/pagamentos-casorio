@@ -414,6 +414,11 @@ button:disabled{
     <button onclick="adicionarNovaTarefa()">+ Adicionar Tarefa</button>
   </div>
 
+  <div class="grafico-card">
+    <h3>📋 Progresso das Tarefas</h3>
+    <canvas id="graficoTarefas"></canvas>
+  </div>
+
   <div class="card">
     <div id="tarefasLista"></div>
   </div>
@@ -457,6 +462,7 @@ let tarefasGlobais = [];
 let itemSelecionado = null;
 let itemParaDeletar = null;
 let graficoOrcamentoChart = null;
+let graficoTarefasChart = null;
 let ultimoTotalPago = 0;
 let abaAtiva = 'pagamentos';
 let estaSalvandoTarefa = false;
@@ -723,6 +729,53 @@ function renderTarefas() {
   });
   
   console.log(">>> [RENDER] Renderização concluída!");
+  
+  // Atualizar gráfico de tarefas
+  atualizarGraficoTarefas();
+}
+
+// ============================================
+// GRÁFICO DE TAREFAS
+// ============================================
+
+function atualizarGraficoTarefas() {
+  let tarefasFeitas = 0;
+  let tarefasNaoFeitas = 0;
+  
+  tarefasGlobais.forEach(tarefa => {
+    if (tarefa.feita) {
+      tarefasFeitas++;
+    } else {
+      tarefasNaoFeitas++;
+    }
+  });
+
+  const ctxTarefas = document.getElementById('graficoTarefas').getContext('2d');
+  if (graficoTarefasChart) {
+    graficoTarefasChart.destroy();
+  }
+  graficoTarefasChart = new Chart(ctxTarefas, {
+    type: 'doughnut',
+    data: {
+      labels: ['Feitas', 'Faltando'],
+      datasets: [{
+        data: [tarefasFeitas, tarefasNaoFeitas],
+        backgroundColor: ['#4CAF50', '#ddd'],
+        borderColor: ['#fff', '#fff'],
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: { font: { size: 11 } }
+        }
+      }
+    }
+  });
 }
 
 // ============================================
