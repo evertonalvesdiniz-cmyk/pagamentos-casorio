@@ -470,7 +470,8 @@ function abrirAba(nomeAba) {
 document.addEventListener('DOMContentLoaded', function() {
   carregarTodasAsTarefas();
   carregarTudo();
-  setInterval(carregarTodasAsTarefas, 3000);
+  // Sincronizar a cada 5 segundos (aumentado de 3s para evitar conflitos)
+  setInterval(carregarTodasAsTarefas, 5000);
   setInterval(carregarTudo, 2000);
 });
 
@@ -513,6 +514,9 @@ function toggleTarefa(tarefaId) {
   
   console.log("Toggle tarefa:", tarefaId, "feita atual:", tarefa.feita);
   
+  // Mostrar feedback visual
+  mostrarAlerta('⏳ Salvando tarefa...', 'sucesso');
+  
   const form = document.createElement("form");
   form.method = "POST";
   form.action = SCRIPT_URL;
@@ -539,9 +543,11 @@ function toggleTarefa(tarefaId) {
   form.submit();
   form.remove();
   
+  // Aguardar 2 segundos para a planilha processar a escrita
   setTimeout(() => {
+    console.log("Recarregando tarefas após toggle...");
     carregarTodasAsTarefas();
-  }, 500);
+  }, 2000);
 }
 
 function adicionarNovaTarefa() {
