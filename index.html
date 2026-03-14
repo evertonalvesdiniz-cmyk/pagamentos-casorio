@@ -498,63 +498,90 @@ function triggerConfete() {
 
 function carregarTodasAsTarefas() {
   const urlTarefas = SCRIPT_URL + "?acao=getTarefas";
-  console.log(">>> CARREGANDO tarefas de:", urlTarefas);
+  console.log(">>> [GET] Carregando tarefas de:", urlTarefas);
   
   fetch(urlTarefas)
-    .then(r => r.json())
+    .then(r => {
+      console.log(">>> [GET] Response status:", r.status);
+      return r.json();
+    })
     .then(data => {
-      console.log(">>> RESPOSTA recebida:", data);
+      console.log(">>> [GET] Resposta completa:", data);
+      console.log(">>> [GET] sucesso?", data.sucesso);
+      console.log(">>> [GET] quantidade de tarefas:", data.tarefas ? data.tarefas.length : 0);
+      
       if (data.sucesso && data.tarefas) {
-        console.log(">>> SUCESSO! Tarefas carregadas:", data.tarefas.length);
+        console.log(">>> [GET] Atualizando array tarefasGlobais...");
         tarefasGlobais = data.tarefas;
+        
+        // Mostrar primeiras 3 tarefas carregadas
+        for (let i = 0; i < Math.min(3, data.tarefas.length); i++) {
+          const t = data.tarefas[i];
+          console.log(">>>   Tarefa", i+1, ":", t.texto, "| feita:", t.feita);
+        }
+        
+        console.log(">>> [GET] Renderizando tarefas...");
         renderTarefas();
       } else {
-        console.log(">>> ERRO! Resposta inválida");
+        console.log(">>> [GET] ERRO: Resposta inválida!");
       }
     })
     .catch(error => {
-      console.error(">>> ERRO ao carregar tarefas:", error);
+      console.error(">>> [GET] ERRO ao carregar tarefas:", error);
     });
 }
 
 function toggleTarefa(tarefaId) {
   const tarefa = tarefasGlobais.find(t => t.id === tarefaId);
-  if (!tarefa) return;
+  if (!tarefa) {
+    console.log(">>> ERRO: Tarefa não encontrada no array!");
+    return;
+  }
   
   estaSalvandoTarefa = true;
-  console.log(">>> MARCANDO tarefa:", tarefaId, "estado atual:", tarefa.feita);
-  
   const novoValor = !tarefa.feita;
-  const dados = new URLSearchParams({
+  
+  console.log("=".repeat(50));
+  console.log(">>> INICIANDO TOGGLE");
+  console.log(">>> Tarefa ID:", tarefaId);
+  console.log(">>> Estado atual:", tarefa.feita);
+  console.log(">>> Novo estado:", novoValor);
+  console.log(">>> ENVIANDO POST para:", SCRIPT_URL);
+  console.log("=".repeat(50));
+  
+  // Usar form.submit() (mais confiável com Google Apps Script)
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = SCRIPT_URL;
+  form.target = "uploadFrame";
+
+  const dados = {
     tipo: "toggleTarefa",
     tarefaId: tarefaId,
     feita: novoValor.toString()
-  });
+  };
 
-  console.log(">>> ENVIANDO POST via fetch:", dados.toString());
+  for(let key in dados){
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = dados[key];
+    console.log(">>> Campo:", key, "=", dados[key]);
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+  console.log(">>> Form submitted!");
+  form.remove();
   
-  fetch(SCRIPT_URL, {
-    method: "POST",
-    body: dados
-  })
-  .then(response => {
-    console.log(">>> POST enviado! Status:", response.status);
-    return response.text();
-  })
-  .then(result => {
-    console.log(">>> Resposta do Apps Script:", result);
-    // Aguardar 5 segundos para ter CERTEZA que atualizou
-    console.log(">>> Aguardando 5s antes de recarregar...");
-    setTimeout(() => {
-      console.log(">>> Recarregando tarefas agora...");
-      carregarTodasAsTarefas();
-      estaSalvandoTarefa = false;
-    }, 5000);
-  })
-  .catch(error => {
-    console.error(">>> ERRO ao enviar POST:", error);
+  console.log(">>> Aguardando 6 segundos antes de recarregar...");
+  setTimeout(() => {
+    console.log(">>> Recarregando tarefas...");
+    carregarTodasAsTarefas();
     estaSalvandoTarefa = false;
-  });
+    console.log("=".repeat(50));
+  }, 6000);
 }
 
 function adicionarNovaTarefa() {
@@ -602,15 +629,18 @@ function renderTarefas() {
   const tarefasLista = document.getElementById("tarefasLista");
   tarefasLista.innerHTML = "";
   
-  console.log(">>> RENDERIZANDO", tarefasGlobais.length, "tarefas");
+  console.log(">>> [RENDER] Renderizando", tarefasGlobais.length, "tarefas");
   
   if (tarefasGlobais.length === 0) {
+    console.log(">>> [RENDER] Nenhuma tarefa!");
     tarefasLista.innerHTML = '<p style="color:#999; text-align:center;">Nenhuma tarefa cadastrada</p>';
     return;
   }
   
-  tarefasGlobais.forEach((tarefa) => {
-    console.log("   -", tarefa.texto, "| feita:", tarefa.feita);
+  tarefasGlobais.forEach((tarefa, idx) => {
+    const statusStr = tarefa.feita ? "✓ FEITA" : "○ NÃO FEITA";
+    console.log(">>> [RENDER]", idx+1, ":", tarefa.texto.substring(0, 30), "|", statusStr);
+    
     const tarefaHTML = `
       <div class="tarefa-item ${tarefa.feita ? 'feita' : ''}" onclick="toggleTarefa('${tarefa.id}')">
         <input type="checkbox" class="tarefa-checkbox" ${tarefa.feita ? 'checked' : ''} onclick="event.stopPropagation()">
@@ -620,6 +650,8 @@ function renderTarefas() {
     `;
     tarefasLista.innerHTML += tarefaHTML;
   });
+  
+  console.log(">>> [RENDER] Renderização concluída!");
 }
 
 // ============================================
@@ -983,19 +1015,28 @@ function render() {
   document.getElementById("barraGeral").style.width = progressoTotal + "%";
 }
 
-// Fechar modal ao clicar fora
-document.addEventListener('click', function(event) {
-  const modal = document.getElementById('modal');
-  const confirmModal = document.getElementById('confirmModal');
-  
-  if (event.target === modal) {
-    fecharModal();
+// ============================================
+// FUNÇÃO DE TESTE - USE NO CONSOLE (F12)
+// ============================================
+
+function testarToggleTarefa() {
+  if (tarefasGlobais.length === 0) {
+    console.error("Nenhuma tarefa carregada!");
+    return;
   }
   
-  if (event.target === confirmModal) {
-    cancelarDelecao();
-  }
-});
+  const tarefa = tarefasGlobais[1]; // Segunda tarefa
+  console.log("Testando com tarefa:", tarefa.texto);
+  toggleTarefa(tarefa.id);
+}
+
+// Use assim no console:
+// testarToggleTarefa()
+// Ou para testar uma tarefa específica:
+// toggleTarefa('60e9cf04-ba0c-4093-8c18-a7726f6cacf6')
+
+// Mostrar array de tarefas:
+// console.table(tarefasGlobais)
 
 </script>
 
