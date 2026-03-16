@@ -838,30 +838,24 @@ function carregarTudo() {
 // ============================================
 
 function enviarParaSheets(dados, tipo = "item") {
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = SCRIPT_URL;
-  form.target = "uploadFrame";
+  const formData = new FormData();
+  formData.append("tipo", tipo);
+  formData.append("descricao", dados.descricao || "");
+  formData.append("valor", dados.valor || 0);
+  formData.append("itemId", dados.itemId || "");
+  formData.append("data", new Date().toLocaleDateString('pt-BR'));
 
-  const dadosCompletos = {
-    tipo: tipo,
-    descricao: dados.descricao || "",
-    valor: dados.valor || 0,
-    itemId: dados.itemId || "",
-    data: new Date().toLocaleDateString('pt-BR')
-  };
-
-  for(let key in dadosCompletos){
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = key;
-    input.value = dadosCompletos[key];
-    form.appendChild(input);
-  }
-
-  document.body.appendChild(form);
-  form.submit();
-  form.remove();
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    body: formData
+  })
+  .then(response => response.text())
+  .then(result => {
+    console.log(">>> Resposta do Apps Script:", result);
+  })
+  .catch(error => {
+    console.error(">>> Erro ao enviar para Sheets:", error);
+  });
 }
 
 // ============================================
@@ -1005,27 +999,21 @@ function confirmarDelecao() {
 }
 
 function deletarDaPlanilha(itemId) {
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = SCRIPT_URL;
-  form.target = "uploadFrame";
+  const formData = new FormData();
+  formData.append("tipo", "deletarItem");
+  formData.append("itemId", itemId);
 
-  const dados = {
-    tipo: "deletarItem",
-    itemId: itemId
-  };
-
-  for(let key in dados){
-    const input = document.createElement("input");
-    input.type = "hidden";
-    input.name = key;
-    input.value = dados[key];
-    form.appendChild(input);
-  }
-
-  document.body.appendChild(form);
-  form.submit();
-  form.remove();
+  fetch(SCRIPT_URL, {
+    method: "POST",
+    body: formData
+  })
+  .then(response => response.text())
+  .then(result => {
+    console.log(">>> Item deletado:", result);
+  })
+  .catch(error => {
+    console.error(">>> Erro ao deletar:", error);
+  });
 }
 
 // ============================================
